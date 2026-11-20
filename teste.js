@@ -74,6 +74,9 @@ teste('vozes: só inglês, Google primeiro, depois as "Natural"', () => {
     { name: 'Google US English', lang: 'en-US' },
     { name: 'English Android', lang: 'en_US' },
   ];
+  const edge = F.ordenarVozes([{ name: 'Microsoft Ana Online (Natural) - English (United States)', lang: 'en-US' },
+    { name: 'Microsoft Jenny Online (Natural) - English (United States)', lang: 'en-US' }]);
+  assert.ok(edge[0].name.includes('Jenny'), 'no Edge, a padrão não pode ser a voz de criança');
   const ord = F.ordenarVozes(vs).map(v => v.name);
   assert.strictEqual(ord.length, 6);
   assert.deepStrictEqual(ord.slice(0, 4), ['Google US English', 'Google UK English Female',
@@ -98,3 +101,52 @@ teste('conteúdo: 5 níveis, lições com tradução, ids únicos', () => {
 });
 
 console.log(`\n${ok} testes passaram.`);
+
+// ---------- v2: treino ----------
+const T = require('./treino.js');
+
+teste('repita comigo: frase igual = tudo certo', () => {
+  const c = T.compararFala(['Hello!', 'My', 'name', 'is', 'Eduardo.'], 'hello my name is Eduardo');
+  assert.deepStrictEqual(c, [true, true, true, true, true]);
+  assert.strictEqual(T.nota(c).msg, 'Perfeito! 🎉');
+});
+
+teste('repita comigo: palavra trocada fica vermelha, o resto continua certo', () => {
+  const c = T.compararFala(['I', 'like', 'games.'], 'I lake games');
+  assert.deepStrictEqual(c, [true, false, true]);
+});
+
+teste('repita comigo: palavra pulada fica vermelha', () => {
+  const c = T.compararFala(['Max', 'is', 'brown', 'and', 'very', 'happy.'], 'max is brown very happy');
+  assert.deepStrictEqual(c, [true, true, true, false, true, true]);
+});
+
+teste("repita comigo: I'm = I am, 7 = seven, dog's = dog", () => {
+  assert.deepStrictEqual(T.compararFala(["I'm", 'fine'], 'I am fine'), [true, true]);
+  assert.deepStrictEqual(T.compararFala(['I', 'wake', 'up', 'at', 'seven.'], 'I wake up at 7'), [true, true, true, true, true]);
+  assert.deepStrictEqual(T.compararFala(["The", "dog's", 'name'], 'the dogs name'), [true, true, true]);
+});
+
+teste('repita comigo: não ouviu nada = tudo vermelho', () => {
+  assert.deepStrictEqual(T.compararFala(['Good', 'night!'], ''), [false, false]);
+});
+
+teste('flashcards: acertou sobe de caixa e volta mais tarde; errou volta hoje', () => {
+  const hoje = '2026-11-20';
+  let c = { en: 'water', pt: 'água' };
+  c = T.responder(c, true, hoje);
+  assert.strictEqual(c.caixa, 1); assert.strictEqual(c.proxima, '2026-11-21');
+  c = T.responder(c, true, '2026-11-21');
+  assert.strictEqual(c.caixa, 2); assert.strictEqual(c.proxima, '2026-11-23');
+  c = T.responder(c, false, '2026-11-23');
+  assert.strictEqual(c.caixa, 0); assert.strictEqual(c.proxima, '2026-11-23');
+  assert.strictEqual(c.acertos, 2); assert.strictEqual(c.erros, 1);
+});
+
+teste('flashcards: só aparecem as palavras vencidas (e as novas)', () => {
+  const cad = [{ en: 'a' }, { en: 'b', proxima: '2026-11-19' }, { en: 'c', proxima: '2026-11-25' }];
+  assert.deepStrictEqual(T.paraRevisar(cad, '2026-11-20').map(c => c.en), ['a', 'b']);
+  assert.strictEqual(T.somarDias('2026-12-30', 4), '2027-01-03');
+});
+
+console.log(`\n${ok} testes passaram (com o treino).`);

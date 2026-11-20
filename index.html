@@ -22,6 +22,7 @@
     <section id="telaNiveis">
       <h1 class="titulo">Escolha o seu nível</h1>
       <p class="intro">Comece pelo 1 se você sabe pouco inglês. Cada nível já vem com a velocidade e a tradução certas, e você pode mudar quando quiser.</p>
+      <div id="avisoRevisao" class="sugestao revisao-hoje" hidden></div>
       <div id="listaNiveis" class="niveis"></div>
     </section>
 
@@ -53,7 +54,8 @@
           <button id="fraseAnt" class="botao icone" type="button" aria-label="Frase anterior" title="Frase anterior (←)">⏮</button>
           <button id="tocar" class="botao icone grande" type="button" aria-label="Ler" title="Ler / pausar (espaço)">▶</button>
           <button id="fraseProx" class="botao icone" type="button" aria-label="Próxima frase" title="Próxima frase (→)">⏭</button>
-          <button id="repetir" class="botao" type="button" title="Repetir a frase (R)">🔁 Repetir</button>
+          <button id="repetir" class="botao" type="button" title="Repetir a frase (R)" aria-label="Repetir a frase">🔁<span class="rotulo"> Repetir</span></button>
+          <button id="falarEu" class="botao microfone" type="button" title="Falar a frase no microfone (M)" aria-label="Falar a frase no microfone">🎤<span class="rotulo"> Falar</span></button>
         </div>
         <div id="velocidades" class="velocidades" role="radiogroup" aria-label="Velocidade"></div>
         <p id="explicaVel" class="explica-vel"></p>
@@ -68,6 +70,7 @@
           <button id="testarVoz" class="botao" type="button">🔊 Testar voz</button>
           <label class="chave"><input id="optTraducao" type="checkbox"> Mostrar tradução</label>
           <label class="chave"><input id="optParar" type="checkbox"> Parar depois de cada frase</label>
+          <label class="chave"><input id="optRepita" type="checkbox"> 🎤 Repita comigo (o microfone abre depois de cada frase)</label>
           <div class="fonte">
             <button id="fonteMenos" class="botao icone" type="button" aria-label="Letra menor">A−</button>
             <button id="fonteMais" class="botao icone" type="button" aria-label="Letra maior">A+</button>
@@ -84,11 +87,37 @@
       </div>
     </section>
 
+    <!-- Tela 5: revisão com flashcards -->
+    <section id="telaRevisao" hidden>
+      <button id="voltarDaRevisao" class="botao" type="button">← Caderno</button>
+      <h1 class="titulo">🧠 Revisão</h1>
+      <p id="revInfo" class="intro"></p>
+      <div id="cartao" class="flashcard">
+        <p id="fcEn" class="fc-en" lang="en"></p>
+        <div class="j-botoes centro">
+          <button id="fcOuvir" class="botao" type="button">▶ Ouvir</button>
+          <button id="fcFalar" class="botao microfone" type="button">🎤 Falar</button>
+        </div>
+        <p id="fcFala" class="fc-fala"></p>
+        <div id="fcResposta" hidden>
+          <p id="fcPt" class="fc-pt"></p>
+          <p id="fcFrase" class="fc-frase" lang="en"></p>
+        </div>
+        <button id="fcMostrar" class="botao principal" type="button">Mostrar a tradução</button>
+        <div id="fcBotoes" class="j-botoes centro" hidden>
+          <button id="fcErrei" class="botao" type="button">😕 Errei</button>
+          <button id="fcAcertei" class="botao principal" type="button">🙂 Acertei</button>
+        </div>
+      </div>
+      <div id="revFim" class="fim" hidden></div>
+    </section>
+
     <!-- Tela 4: caderno de palavras -->
     <section id="telaCaderno" hidden>
       <button id="voltarDoCaderno" class="botao" type="button">← Voltar</button>
       <h1 class="titulo">📒 Meu caderno de palavras</h1>
       <p class="intro">As palavras que você salvou. Toque em ▶ para ouvir de novo.</p>
+      <button id="revisar" class="botao principal" type="button">🧠 Revisar</button>
       <div id="listaCaderno" class="caderno"></div>
     </section>
   </main>
@@ -102,7 +131,9 @@
     <div class="j-botoes">
       <button id="jOuvir" class="botao principal" type="button">▶ Ouvir</button>
       <button id="jDevagar" class="botao" type="button">🐢 Devagar</button>
+      <button id="jFalar" class="botao microfone" type="button">🎤 Falar</button>
     </div>
+    <p id="jResultado" class="j-resultado"></p>
     <p class="j-rotulo">Tradução</p>
     <p id="jTraducao" class="j-traducao"></p>
     <div class="j-botoes">
@@ -114,6 +145,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="texto.js"></script>
   <script src="fala.js"></script>
+  <script src="treino.js"></script>
   <script src="conteudo.js"></script>
   <script src="app.js"></script>
 </body>

@@ -6,6 +6,9 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const sintese = window.speechSynthesis;
+  // Reconhecimento de fala: transforma a sua voz em texto (Chrome e Edge; usa a internet)
+  const Reconhecer = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SEM_MICROFONE = 'Este navegador não reconhece fala. Use o Chrome (no PC ou no celular).';
 
   // ---------- guardar coisas neste navegador ----------
   function ler(chave, padrao) {
@@ -16,7 +19,7 @@
     try { localStorage.setItem(chave, JSON.stringify(valor)); } catch { /* modo privado: ignora */ }
   }
   const prefs = Object.assign({ voz: '', velocidade: 0.25, traducao: true, pararCadaFrase: false,
-    fonte: 1.35, tema: 'claro', nivel: 1 }, ler('ingles:prefs', {}));
+    repitaComigo: false, fonte: 1.35, tema: 'claro', nivel: 1 }, ler('ingles:prefs', {}));
   const salvarPrefs = () => gravar('ingles:prefs', prefs);
   const feitas = ler('ingles:feitas', {});          // { idDaLicao: true }
   let caderno = ler('ingles:caderno', []);          // [{ en, pt, frase, data }]
@@ -37,11 +40,11 @@
   };
 
   // ---------- telas ----------
-  const telas = ['telaNiveis', 'telaLicoes', 'telaLeitura', 'telaCaderno'];
+  const telas = ['telaNiveis', 'telaLicoes', 'telaLeitura', 'telaCaderno', 'telaRevisao'];
   let telaAnterior = 'telaNiveis';
   function mostrar(id) {
     const atual = telas.find(t => !$(t).hidden);
-    if (id === 'telaCaderno' && atual !== 'telaCaderno') telaAnterior = atual;
+    if (id === 'telaCaderno' && atual !== 'telaCaderno' && atual !== 'telaRevisao') telaAnterior = atual;
     if (id !== 'telaLeitura') parar();
     telas.forEach(t => { $(t).hidden = t !== id; });
     window.scrollTo(0, 0);
@@ -133,6 +136,10 @@
   // ---------- opções ----------
   $('optTraducao').onchange = () => { prefs.traducao = $('optTraducao').checked; salvarPrefs(); aplicarTraducao(); };
   $('optParar').onchange = () => { prefs.pararCadaFrase = $('optParar').checked; salvarPrefs(); };
+  $('optRepita').onchange = () => {
+    prefs.repitaComigo = $('optRepita').checked; salvarPrefs();
+    if (prefs.repitaComigo && !Reconhecer) { status(SEM_MICROFONE); }
+  };
   function aplicarTraducao() {
     $('texto').classList.toggle('sem-traducao', !prefs.traducao);
     if (prefs.traducao && estado.nivel === 5) estado.frases.forEach((f, i) => traduzirFrase(i));
@@ -201,6 +208,7 @@
     aplicarPadraoDoNivel(nivel.n);
     $('optTraducao').checked = prefs.traducao;
     $('optParar').checked = prefs.pararCadaFrase;
+    $('optRepita').checked = prefs.repitaComigo;
     marcarVelocidade();
     $('tituloLicao').textContent = titulo;
     status(nivel.n === 1 ? 'Aperte ▶ para ouvir. Toque numa palavra para ver os detalhes.'
@@ -345,6 +353,13 @@
       const ok = await lerFrase(s, w, g);
       if (!ok || g !== estado.geracao) return;
       w = 0;
+      estado.ultimaLida = s;
+      // Repita comigo: depois de ouvir, é a sua vez de falar a frase
+      if (prefs.repitaComigo && Reconhecer) {
+        marcar(s, -1);
+        await praticarFrase(s, g);
+        if (g !== estado.geracao) return;
+      }
       const ultima = s === estado.frases.length - 1;
       if (soUma || prefs.pararCadaFrase || ultima) {
         estado.lendo = false;
@@ -365,6 +380,7 @@
   function parar() {
     estado.geracao++;
     limparTimers();
+    pararMicrofone();
     if (sintese) sintese.cancel();
     estado.lendo = false;
     botaoTocar();
@@ -403,9 +419,95 @@
       vl.onclick = () => abrirNivel(estado.nivel);
       fim.appendChild(vl);
     }
+    if (estado.nivel === 1) {
+      const novas = estado.licao.frases.filter(([en]) => !noCaderno(en));
+      if (novas.length) {
+        const cd = document.createElement('button');
+        cd.className = 'botao'; cd.type = 'button';
+        cd.textContent = `⭐ Pôr as ${novas.length} palavras no caderno (para revisar)`;
+        cd.onclick = () => {
+          for (const [en, pt] of novas) if (!noCaderno(en)) caderno.push({ en, pt, frase: '', data: Treino.hojeISO() });
+          salvarCaderno();
+          cd.disabled = true; cd.textContent = '✅ No caderno! Revise amanhã em 📒 Caderno.';
+        };
+        fim.appendChild(cd);
+      }
+    }
     $('texto').appendChild(fim);
     fim.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+
+  // ---------- microfone: repita comigo ----------
+  let reconhecedor = null;
+  function pararMicrofone() {
+    if (reconhecedor) { try { reconhecedor.abort(); } catch { /* já parou */ } reconhecedor = null; }
+    document.querySelectorAll('.microfone.ouvindo').forEach(b => b.classList.remove('ouvindo'));
+  }
+  // Abre o microfone e devolve { frases: [o que entendeu, alternativas...] } ou { erro }
+  function ouvirVoce(botao) {
+    return new Promise(resolve => {
+      if (!Reconhecer) { resolve({ erro: SEM_MICROFONE }); return; }
+      pararMicrofone();
+      if (sintese) sintese.cancel();
+      const r = new Reconhecer();
+      reconhecedor = r;
+      r.lang = 'en-US';
+      r.interimResults = false;
+      r.maxAlternatives = 5;
+      r.continuous = false;
+      let frases = [], erro = null;
+      r.onresult = e => { frases = Array.from(e.results[0] || []).map(a => a.transcript); };
+      r.onerror = e => {
+        erro = e.error === 'not-allowed' || e.error === 'service-not-allowed'
+          ? 'O navegador não deixou usar o microfone. Clique no cadeado ao lado do endereço e permita o microfone.'
+          : e.error === 'no-speech' ? 'Não ouvi nada. Aperte 🎤 e fale logo depois.'
+          : e.error === 'network' ? 'O reconhecimento de fala precisa de internet.'
+          : e.error === 'aborted' ? null : 'O microfone deu erro (' + e.error + ').';
+      };
+      r.onend = () => {
+        if (reconhecedor === r) reconhecedor = null;
+        if (botao) botao.classList.remove('ouvindo');
+        resolve(erro ? { erro } : { frases });
+      };
+      if (botao) botao.classList.add('ouvindo');
+      const tempo = setTimeout(() => { try { r.stop(); } catch { /* ok */ } }, 15000);
+      r.addEventListener('end', () => clearTimeout(tempo));
+      try { r.start(); } catch { if (botao) botao.classList.remove('ouvindo'); resolve({ erro: 'Não consegui abrir o microfone.' }); }
+    });
+  }
+  // Das alternativas que o reconhecimento achou, fica a que mais acertou
+  function melhorResultado(palavrasDaTela, frases) {
+    let melhor = { certos: palavrasDaTela.map(() => false), ouvido: '' };
+    for (const f of frases) {
+      const c = Treino.compararFala(palavrasDaTela, f);
+      if (c.filter(Boolean).length > melhor.certos.filter(Boolean).length || !melhor.ouvido) melhor = { certos: c, ouvido: f };
+    }
+    return melhor;
+  }
+  // Você fala a frase s; as palavras ficam verdes (certas) ou vermelhas (treinar)
+  async function praticarFrase(s, g) {
+    const f = estado.frases[s];
+    if (!f) return;
+    const spans = estado.elPalavras[s];
+    spans.forEach(sp => sp.classList.remove('certa', 'errada'));
+    estado.elFrases[s].classList.add('atual');
+    status('🎙️ Sua vez! Fale a frase em inglês...');
+    const r = await ouvirVoce($('falarEu'));
+    if (g !== undefined && g !== estado.geracao) return;
+    if (r.erro) { status(r.erro); return; }
+    const { certos, ouvido } = melhorResultado(f.ps, r.frases);
+    certos.forEach((ok, i) => spans[i].classList.add(ok ? 'certa' : 'errada'));
+    const n = Treino.nota(certos);
+    status(`${n.msg} ${n.ok} de ${n.total} palavras. Eu entendi: "${ouvido || '...'}"`);
+    if (g !== undefined) await esperar(1800);   // dá tempo de ver o resultado antes de seguir
+  }
+  $('falarEu').onclick = () => {
+    if ($('falarEu').classList.contains('ouvindo')) { pararMicrofone(); return; }
+    const s = Math.min(estado.ultimaLida ?? estado.s, estado.frases.length - 1);
+    parar();
+    marcar(s, -1);
+    praticarFrase(s);
+  };
 
   // ---------- botões da leitura ----------
   $('tocar').onclick = () => { if (estado.lendo) parar(); else tocarDe(estado.s, estado.w); };
@@ -432,6 +534,7 @@
     else if (e.key === 'ArrowRight') $('fraseProx').click();
     else if (e.key === 'ArrowLeft') $('fraseAnt').click();
     else if (e.key === 'r' || e.key === 'R') $('repetir').click();
+    else if (e.key === 'm' || e.key === 'M') $('falarEu').click();
   });
 
   // ---------- tradução e pronúncia (internet) ----------
@@ -488,6 +591,7 @@
     palavraAberta = { en, frase: f.en, si, wi };
     $('jPalavra').textContent = en;
     $('jIpa').textContent = '';
+    $('jResultado').textContent = '';
     $('jTraducao').textContent = f.emoji ? f.pt : 'Buscando...';
     atualizarBotaoSalvar();
     $('jLerDaqui').hidden = !!f.emoji;
@@ -503,7 +607,18 @@
       }
     } else palavraAberta.pt = f.pt;
   }
-  const fecharJanela = () => { if (sintese) sintese.cancel(); $('janela').close(); };
+  const fecharJanela = () => { if (sintese) sintese.cancel(); pararMicrofone(); $('janela').close(); };
+  $('jFalar').onclick = async () => {
+    if ($('jFalar').classList.contains('ouvindo')) { pararMicrofone(); return; }
+    const alvo = palavraAberta.en;
+    $('jResultado').textContent = '🎙️ Fale a palavra...';
+    const r = await ouvirVoce($('jFalar'));
+    if (!palavraAberta || palavraAberta.en !== alvo) return;
+    if (r.erro) { $('jResultado').textContent = r.erro; return; }
+    const { certos, ouvido } = melhorResultado(Fala.palavras(alvo), r.frases);
+    $('jResultado').textContent = certos.every(Boolean) ? '✅ Certo! Muito bem.'
+      : `❌ Eu entendi "${ouvido || '...'}". Ouça de novo e tente outra vez.`;
+  };
   $('jFechar').onclick = fecharJanela;
   $('janela').addEventListener('click', e => { if (e.target === $('janela')) fecharJanela(); });
   $('jOuvir').onclick = () => { sintese && sintese.cancel(); falar(palavraAberta.en, 1); };
@@ -520,11 +635,95 @@
   $('jSalvar').onclick = () => {
     if (!palavraAberta || noCaderno(palavraAberta.en)) return;
     caderno.unshift({ en: palavraAberta.en, pt: palavraAberta.pt || '', frase: palavraAberta.frase, data: new Date().toISOString().slice(0, 10) });
-    gravar('ingles:caderno', caderno);
+    salvarCaderno();
     atualizarBotaoSalvar();
-    contarCaderno();
   };
-  function contarCaderno() { $('contaCaderno').textContent = caderno.length; }
+  function contarCaderno() {
+    $('contaCaderno').textContent = caderno.length;
+    const n = Treino.paraRevisar(caderno, Treino.hojeISO()).length;
+    $('revisar').textContent = n ? `🧠 Revisar agora (${n} ${n === 1 ? 'palavra' : 'palavras'})` : '🧠 Nada para revisar hoje';
+    $('revisar').disabled = !n;
+    const aviso = $('avisoRevisao');
+    aviso.hidden = !n;
+    aviso.innerHTML = '';
+    if (n) {
+      const t = document.createElement('span');
+      t.textContent = `🧠 Você tem ${n} ${n === 1 ? 'palavra' : 'palavras'} para revisar hoje.`;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'botao principal'; b.textContent = 'Revisar';
+      b.onclick = () => { telaAnterior = 'telaNiveis'; comecarRevisao(); };
+      aviso.append(t, b);
+    }
+  }
+  function salvarCaderno() { gravar('ingles:caderno', caderno); contarCaderno(); }
+
+  // ---------- revisão com flashcards ----------
+  // Aparece a palavra em inglês (e a voz fala). Você tenta lembrar o significado,
+  // pode falar no microfone, e depois diz se acertou. Errou: volta no fim da fila.
+  const rev = { fila: [], atual: null, feitas: 0 };
+  function comecarRevisao() {
+    rev.fila = Treino.paraRevisar(caderno, Treino.hojeISO()).map(c => c.en);
+    rev.feitas = 0;
+    $('cartao').hidden = false;
+    $('revFim').hidden = true;
+    mostrar('telaRevisao');
+    proximoCartao();
+  }
+  function proximoCartao() {
+    pararMicrofone();
+    const en = rev.fila.shift();
+    rev.atual = caderno.find(c => c.en === en) || null;
+    if (!rev.atual) { if (rev.fila.length) { proximoCartao(); return; } fimRevisao(); return; }
+    const n = rev.fila.length + 1;
+    $('revInfo').textContent = `${n === 1 ? 'Falta 1' : 'Faltam ' + n}. Você sabe o que significa?`;
+    $('fcEn').textContent = rev.atual.en;
+    $('fcFala').textContent = '';
+    $('fcPt').textContent = rev.atual.pt || '(sem tradução salva)';
+    $('fcFrase').textContent = rev.atual.frase && rev.atual.frase !== rev.atual.en ? rev.atual.frase : '';
+    $('fcResposta').hidden = true;
+    $('fcBotoes').hidden = true;
+    $('fcMostrar').hidden = false;
+    if (sintese) sintese.cancel();
+    falar(rev.atual.en, 0.85);
+  }
+  function responderCartao(acertou) {
+    const i = caderno.indexOf(rev.atual);
+    if (i >= 0) caderno[i] = Treino.responder(rev.atual, acertou, Treino.hojeISO());
+    if (!acertou) rev.fila.push(rev.atual.en);   // aparece de novo antes de acabar
+    else rev.feitas++;
+    salvarCaderno();
+    proximoCartao();
+  }
+  function fimRevisao() {
+    $('cartao').hidden = true;
+    $('revInfo').textContent = '';
+    const fim = $('revFim');
+    const amanha = Treino.somarDias(Treino.hojeISO(), 1);
+    const nAmanha = Treino.paraRevisar(caderno, amanha).length;
+    fim.innerHTML = `<strong>🎉 Revisão de hoje concluída!</strong><br>${rev.feitas} ${rev.feitas === 1 ? 'palavra revisada' : 'palavras revisadas'}.
+      ${nAmanha ? `Amanhã voltam ${nAmanha}.` : 'Amanhã não tem nada para revisar.'}<br>`;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'botao principal'; b.textContent = 'Voltar ao caderno';
+    b.onclick = () => { montarCaderno(); mostrar('telaCaderno'); };
+    fim.appendChild(b);
+    fim.hidden = false;
+  }
+  $('revisar').onclick = comecarRevisao;
+  $('voltarDaRevisao').onclick = () => { pararMicrofone(); montarCaderno(); mostrar('telaCaderno'); };
+  $('fcOuvir').onclick = () => { if (sintese) sintese.cancel(); falar(rev.atual.en, 0.85); };
+  $('fcMostrar').onclick = () => { $('fcResposta').hidden = false; $('fcBotoes').hidden = false; $('fcMostrar').hidden = true; };
+  $('fcErrei').onclick = () => responderCartao(false);
+  $('fcAcertei').onclick = () => responderCartao(true);
+  $('fcFalar').onclick = async () => {
+    if ($('fcFalar').classList.contains('ouvindo')) { pararMicrofone(); return; }
+    const alvo = rev.atual;
+    $('fcFala').textContent = '🎙️ Fale a palavra...';
+    const r = await ouvirVoce($('fcFalar'));
+    if (rev.atual !== alvo) return;
+    if (r.erro) { $('fcFala').textContent = r.erro; return; }
+    const { certos, ouvido } = melhorResultado(Fala.palavras(alvo.en), r.frases);
+    $('fcFala').textContent = certos.every(Boolean) ? '✅ Pronúncia certa!' : `❌ Eu entendi "${ouvido || '...'}". Tente de novo.`;
+  };
   function montarCaderno() {
     const box = $('listaCaderno');
     box.innerHTML = '';
@@ -544,11 +743,14 @@
       const forte = document.createElement('strong'); forte.lang = 'en'; forte.textContent = c.en;
       const pt = document.createElement('span'); pt.textContent = c.pt;
       const fr = document.createElement('small'); fr.lang = 'en'; fr.textContent = c.frase && c.frase !== c.en ? c.frase : '';
-      txt.append(forte, pt, fr);
+      const quando = document.createElement('small'); quando.className = 'quando';
+      quando.textContent = !c.proxima ? 'Nova: ainda não revisada'
+        : c.proxima <= Treino.hojeISO() ? 'Revisar hoje' : 'Próxima revisão: ' + c.proxima.split('-').reverse().slice(0, 2).join('/');
+      txt.append(forte, pt, fr, quando);
       const tirar = document.createElement('button');
       tirar.className = 'botao icone'; tirar.type = 'button'; tirar.textContent = '🗑';
       tirar.setAttribute('aria-label', 'Tirar ' + c.en + ' do caderno');
-      tirar.onclick = () => { caderno.splice(i, 1); gravar('ingles:caderno', caderno); contarCaderno(); montarCaderno(); };
+      tirar.onclick = () => { caderno.splice(i, 1); salvarCaderno(); montarCaderno(); };
       item.append(ouvir, txt, tirar);
       box.appendChild(item);
     });

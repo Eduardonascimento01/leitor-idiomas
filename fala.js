@@ -93,11 +93,14 @@
 
   // Só inglês. Ordem: Google, depois as "Natural" da Microsoft (soam humanas),
   // depois o resto; dentro de cada grupo, americano antes de britânico.
+  // Entre as Natural, as vozes adultas mais claras vêm antes (a "Ana" é voz de criança).
+  const PREFERIDAS = ['Aria', 'Jenny', 'Guy', 'Ava', 'Andrew', 'Emma', 'Brian', 'Sonia', 'Ryan', 'Libby'];
+  const preferida = v => { const i = PREFERIDAS.findIndex(n => v.name.includes(n)); return i < 0 ? 99 : i; };
   function ordenarVozes(todas) {
     const grupo = v => (/google/i.test(v.name) ? 0 : /natural/i.test(v.name) ? 1 : 2);
     const pais = v => (idioma(v) === 'en-US' ? 0 : idioma(v) === 'en-GB' ? 1 : 2);
     return todas.filter(ehIngles).sort((a, b) =>
-      grupo(a) - grupo(b) || pais(a) - pais(b) || a.name.localeCompare(b.name));
+      grupo(a) - grupo(b) || pais(a) - pais(b) || preferida(a) - preferida(b) || a.name.localeCompare(b.name));
   }
 
   // Padrões de cada nível: velocidade, mostrar tradução, parar a cada frase

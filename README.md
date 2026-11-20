@@ -11,16 +11,20 @@ Projeto irmão do [Leitor de Livros](https://github.com/Eduardonascimento01/leit
 - **Tocar numa palavra:** ouvir normal ou devagar, ver a tradução e a pronúncia (IPA) e salvar no caderno.
 - **Frase a frase:** opção de parar depois de cada frase e botão 🔁 Repetir.
 - **Tradução:** visível, escondida ou só na frase em que você tocar no botão PT.
+- **🎤 Repita comigo (v2):** você fala a frase no microfone e cada palavra fica verde (certa) ou vermelha (treinar). Pode ser pelo botão 🎤 ou automático depois de cada frase. Também funciona na janela da palavra e nos flashcards.
+- **🧠 Flashcards com revisão espaçada (v2):** as palavras do caderno voltam para revisão em 1, 2, 4, 7, 15 e 30 dias conforme você acerta; se errar, ela volta no mesmo dia. No nível 1, dá para pôr todas as palavras da lição no caderno de uma vez.
 - **Caderno de palavras** e progresso das lições, guardados no navegador.
 - Funciona no PC e no celular.
 
 ## Como usar
 Abra o `index.html` no Chrome ou no Edge, ou acesse a versão publicada.
-Atalhos: espaço (ler/pausar), ← → (frase anterior/próxima), R (repetir).
+Atalhos: espaço (ler/pausar), ← → (frase anterior/próxima), R (repetir), M (microfone).
+O microfone usa o reconhecimento de fala do navegador (melhor no Chrome) e precisa de internet.
 Link direto para uma lição: `index.html#licao=2-casa`.
 
 ## Arquivos
 - `fala.js`: a lógica da leitura (velocidades, frases, vozes), testável no Node
+- `treino.js`: compara a sua fala com a frase e calcula a revisão espaçada, testável no Node
 - `conteudo.js`: os níveis e as lições
 - `app.js`: a tela e a voz
 - `texto.js`: transforma o texto do PDF em parágrafos (vem do Leitor de Livros)
