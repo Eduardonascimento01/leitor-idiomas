@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leitor de Inglês</title>
+  <meta name="description" content="Aprenda inglês ouvindo uma voz nativa, palavra por palavra, com tradução.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣️</text></svg>">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <header class="topo">
+    <button id="inicio" class="marca" type="button">🗣️ Leitor de Inglês</button>
+    <div class="acoes">
+      <button id="abrirCaderno" class="botao" type="button">📒 Caderno <span id="contaCaderno" class="bolinha">0</span></button>
+      <button id="tema" class="botao icone" type="button" aria-label="Trocar tema">🌙</button>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <!-- Tela 1: escolher o nível -->
+    <section id="telaNiveis">
+      <h1 class="titulo">Escolha o seu nível</h1>
+      <p class="intro">Comece pelo 1 se você sabe pouco inglês. Cada nível já vem com a velocidade e a tradução certas, e você pode mudar quando quiser.</p>
+      <div id="listaNiveis" class="niveis"></div>
+    </section>
+
+    <!-- Tela 2: lições do nível -->
+    <section id="telaLicoes" hidden>
+      <button id="voltarNiveis" class="botao" type="button">← Níveis</button>
+      <h1 id="tituloNivel" class="titulo"></h1>
+      <p id="descNivel" class="intro"></p>
+      <div id="listaLicoes" class="licoes"></div>
+      <div id="livro" class="livro" hidden>
+        <label class="botao principal" for="entrada">📂 Abrir PDF ou .txt</label>
+        <input id="entrada" type="file" accept=".pdf,.txt,text/plain,application/pdf" hidden>
+        <p class="ou">ou cole um texto em inglês:</p>
+        <textarea id="colado" rows="6" placeholder="Paste your English text here..."></textarea>
+        <button id="lerColado" class="botao principal" type="button">▶ Ler este texto</button>
+        <p id="statusLivro" class="status" role="status"></p>
+      </div>
+    </section>
+
+    <!-- Tela 3: leitura -->
+    <section id="telaLeitura" hidden>
+      <div class="barra-licao">
+        <button id="voltarLicoes" class="botao icone" type="button" aria-label="Voltar">←</button>
+        <h1 id="tituloLicao" class="titulo pequeno"></h1>
+      </div>
+
+      <nav class="controles" aria-label="Controles de leitura">
+        <div class="linha-play">
+          <button id="fraseAnt" class="botao icone" type="button" aria-label="Frase anterior" title="Frase anterior (←)">⏮</button>
+          <button id="tocar" class="botao icone grande" type="button" aria-label="Ler" title="Ler / pausar (espaço)">▶</button>
+          <button id="fraseProx" class="botao icone" type="button" aria-label="Próxima frase" title="Próxima frase (→)">⏭</button>
+          <button id="repetir" class="botao" type="button" title="Repetir a frase (R)">🔁 Repetir</button>
+        </div>
+        <div id="velocidades" class="velocidades" role="radiogroup" aria-label="Velocidade"></div>
+        <p id="explicaVel" class="explica-vel"></p>
+      </nav>
+
+      <details class="ajustes">
+        <summary>⚙️ Voz e opções</summary>
+        <div class="ajustes-corpo">
+          <label class="campo">Voz
+            <select id="voz"></select>
+          </label>
+          <button id="testarVoz" class="botao" type="button">🔊 Testar voz</button>
+          <label class="chave"><input id="optTraducao" type="checkbox"> Mostrar tradução</label>
+          <label class="chave"><input id="optParar" type="checkbox"> Parar depois de cada frase</label>
+          <div class="fonte">
+            <button id="fonteMenos" class="botao icone" type="button" aria-label="Letra menor">A−</button>
+            <button id="fonteMais" class="botao icone" type="button" aria-label="Letra maior">A+</button>
+          </div>
+        </div>
+      </details>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <div id="texto" class="texto"></div>
+      <div id="paginacao" class="paginacao" hidden>
+        <button id="pagAnt" class="botao" type="button">◀ Página</button>
+        <span id="pagInfo"></span>
+        <button id="pagProx" class="botao" type="button">Página ▶</button>
+      </div>
+    </section>
+
+    <!-- Tela 4: caderno de palavras -->
+    <section id="telaCaderno" hidden>
+      <button id="voltarDoCaderno" class="botao" type="button">← Voltar</button>
+      <h1 class="titulo">📒 Meu caderno de palavras</h1>
+      <p class="intro">As palavras que você salvou. Toque em ▶ para ouvir de novo.</p>
+      <div id="listaCaderno" class="caderno"></div>
+    </section>
+  </main>
+
+  <dialog id="janela" class="janela">
+    <div class="janela-topo">
+      <strong id="jPalavra" class="j-palavra"></strong>
+      <button id="jFechar" class="botao icone" type="button" aria-label="Fechar">✕</button>
+    </div>
+    <p id="jIpa" class="j-ipa"></p>
+    <div class="j-botoes">
+      <button id="jOuvir" class="botao principal" type="button">▶ Ouvir</button>
+      <button id="jDevagar" class="botao" type="button">🐢 Devagar</button>
+    </div>
+    <p class="j-rotulo">Tradução</p>
+    <p id="jTraducao" class="j-traducao"></p>
+    <div class="j-botoes">
+      <button id="jSalvar" class="botao" type="button">⭐ Salvar no caderno</button>
+      <button id="jLerDaqui" class="botao" type="button">▶ Ler a partir daqui</button>
+    </div>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="texto.js"></script>
+  <script src="fala.js"></script>
+  <script src="conteudo.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
