@@ -157,7 +157,7 @@
       ],
     },
     {
-      n: 5, nome: 'Livro de verdade', icone: '🚀',
+      n: 5, nome: 'Seu Arquivo', icone: '🚀',
       desc: 'Abra o seu PDF ou .txt em inglês, ou cole um texto. A tradução vem da internet quando você pede.',
       licoes: [],
     },
