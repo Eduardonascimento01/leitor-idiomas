@@ -113,22 +113,34 @@
   function limparTimers() { estado.timers.forEach(clearTimeout); estado.timers = []; }
 
   // ---------- velocidade ----------
+  // Velocidade numa BARRA: cada uma das 8 velocidades é uma "parada" da barra.
+  // Arrastando, o valor e a explicação mudam na hora; ao soltar, a leitura continua na nova velocidade.
   function montarVelocidades() {
     const box = $('velocidades');
-    box.innerHTML = '';
-    for (const v of Fala.VELOCIDADES) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.setAttribute('role', 'radio');
-      b.textContent = Fala.rotuloVelocidade(v);
-      b.dataset.v = v;
-      b.onclick = () => { prefs.velocidade = v; salvarPrefs(); marcarVelocidade(); reiniciarSeLendo(); };
-      box.appendChild(b);
-    }
+    const V = Fala.VELOCIDADES;
+    box.innerHTML = `<div class="vel-topo"><span>Velocidade</span><strong id="velValor"></strong></div>
+      <input id="velBarra" type="range" min="0" max="${V.length - 1}" step="1" aria-label="Velocidade">
+      <div class="vel-marcas">${V.map((v, i) => `<button type="button" data-i="${i}" style="left:calc(${i / (V.length - 1)} * (100% - 24px) + 12px)">${Fala.rotuloVelocidade(v)}</button>`).join('')}</div>`;
+    const barra = $('velBarra');
+    const usar = (i, aplicar) => {
+      prefs.velocidade = V[i];
+      marcarVelocidade();
+      if (aplicar) { salvarPrefs(); reiniciarSeLendo(); }
+    };
+    barra.oninput = () => usar(+barra.value, false);
+    barra.onchange = () => usar(+barra.value, true);
+    box.querySelectorAll('.vel-marcas button').forEach(b => { b.onclick = () => usar(+b.dataset.i, true); });
     marcarVelocidade();
   }
   function marcarVelocidade() {
-    for (const b of $('velocidades').children) b.setAttribute('aria-checked', String(+b.dataset.v === prefs.velocidade));
+    const V = Fala.VELOCIDADES;
+    const i = Math.max(0, V.indexOf(prefs.velocidade));
+    const barra = $('velBarra');
+    barra.value = i;
+    barra.style.setProperty('--p', (i / (V.length - 1)) * 100 + '%');   // parte pintada de azul
+    barra.setAttribute('aria-valuetext', Fala.rotuloVelocidade(V[i]));
+    $('velValor').textContent = Fala.rotuloVelocidade(V[i]);
+    $('velocidades').querySelectorAll('.vel-marcas button').forEach(b => b.classList.toggle('ativa', +b.dataset.i === i));
     const p = Fala.planoDaVelocidade(prefs.velocidade);
     $('explicaVel').textContent = p.modo === 'palavra'
       ? `Palavra por palavra, com ${(p.pausa / 1000).toFixed(1).replace('.', ',')} s de pausa entre elas`
