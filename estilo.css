@@ -1,42 +1,40 @@
-/* Identidade "caderno + marca-texto":
-   papel e tinta como base, e UMA cor de destaque, o amarelo do marca-texto,
-   usada só no que importa (a palavra sendo lida, a velocidade escolhida, a marca).
-   Verde e vermelho aparecem só no microfone, onde querem dizer certo e errado. */
+/* Cores em tons de azul (as da 1ª versão, escolhidas pelo Eduardo).
+   Amarelo = a palavra sendo lida; verde e vermelho = certo e errado no microfone. */
 :root {
-  --fundo: #f6f2e9;          /* papel */
-  --papel: #fffdf8;          /* folha */
-  --texto: #1d1b18;          /* tinta */
-  --suave: #6b655b;          /* lápis */
-  --borda: #e4dccb;
-  --destaque: #ffe066;       /* marca-texto */
-  --frase: #fff7d1;
-  --botao: #fffdf8;
-  --principal: #1d1b18;
-  --principal-texto: #fffdf8;
-  --pt: #56676f;             /* português: tinta azul-acinzentada, discreta */
-  --titulo: #1f2733;         /* cor dos títulos (a mesma da 1ª versão) */
-  --ok: #15803d;
-  --erro: #c2410c;
+  --fundo: #f3f6fb;
+  --papel: #ffffff;
+  --texto: #1f2733;
+  --suave: #5d6878;
+  --borda: #dbe2ec;
+  --destaque: #ffd84d;       /* palavra sendo lida */
+  --frase: #fff4c7;
+  --botao: #ffffff;
+  --principal: #2563eb;      /* azul */
+  --principal-texto: #ffffff;
+  --pt: #6b4fbb;             /* português */
+  --titulo: #1f2733;
+  --ok: #16a34a;
+  --erro: #dc2626;
   --fonte-leitura: 1.35rem;
   --ui: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
   --livro: Georgia, "Times New Roman", serif;
   color-scheme: light;
 }
 :root[data-tema="escuro"] {
-  --fundo: #161513;
-  --papel: #1f1d1a;
-  --texto: #ece6da;
-  --suave: #a39c8f;
-  --borda: #34312b;
-  --destaque: #d4ae2b;
-  --frase: #3a3420;
-  --botao: #26231f;
-  --principal: #ece6da;
-  --principal-texto: #161513;
-  --pt: #9fb2ba;
+  --fundo: #14171c;
+  --papel: #1e232b;
+  --texto: #e7eaf0;
+  --suave: #a0a8b6;
+  --borda: #323a46;
+  --destaque: #b8860b;
+  --frase: #3b3520;
+  --botao: #272d37;
+  --principal: #4d8bff;
+  --principal-texto: #ffffff;
+  --pt: #b9a4ff;
   --titulo: #e7eaf0;
-  --ok: #4ade80;
-  --erro: #fb923c;
+  --ok: #3ccf74;
+  --erro: #f87171;
   color-scheme: dark;
 }
 
@@ -87,7 +85,7 @@ body {
 .botao.principal, .botao.grande { background: var(--principal); color: var(--principal-texto); border-color: transparent; }
 .botao.icone { min-width: 44px; padding: 0 12px; }
 .botao.grande { min-width: 60px; }
-:focus-visible { outline: 2px solid var(--texto); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--principal); outline-offset: 2px; }
 
 /* ---------- tela inicial: continuar + trilha ---------- */
 .continuar {
@@ -115,10 +113,10 @@ body {
 .passo:hover { background: var(--papel); border-color: var(--borda); }
 .passo .num {
   flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%;
-  border: 2px solid var(--borda); background: var(--fundo); font: 400 1.5rem var(--livro); color: var(--suave);
+  border: 2px solid var(--borda); background: var(--papel); font: 700 1.3rem var(--ui); color: var(--suave);
 }
-.passo.atual .num { background: var(--destaque); border-color: var(--destaque); color: #1d1b18; }
-.passo.completo .num { background: var(--principal); border-color: var(--principal); color: var(--principal-texto); }
+.passo.atual .num { background: var(--principal); border-color: var(--principal); color: var(--principal-texto); }
+.passo.completo .num { background: var(--ok); border-color: var(--ok); color: #fff; }
 .passo .txt { flex: 1; min-width: 0; padding-top: 4px; }
 .passo strong { display: block; font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
 .passo span { display: block; color: var(--suave); font-size: .92rem; line-height: 1.45; }
@@ -162,7 +160,7 @@ textarea {
   border: 1px solid var(--borda); background: var(--botao); color: var(--texto); cursor: pointer;
   touch-action: manipulation; font-variant-numeric: tabular-nums;
 }
-.velocidades button[aria-checked="true"] { background: var(--destaque); border-color: var(--destaque); color: #1d1b18; font-weight: 600; }
+.velocidades button[aria-checked="true"] { background: var(--principal); border-color: transparent; color: var(--principal-texto); font-weight: 700; }
 .explica-vel { margin: 0; text-align: center; font-size: .85rem; color: var(--suave); }
 
 .ajustes { margin: 12px 0 0; background: var(--papel); border: 1px solid var(--borda); border-radius: 16px; }
@@ -174,7 +172,7 @@ textarea {
   background: var(--botao); color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; padding: 8px;
 }
 .chave { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
-.chave input { width: 20px; height: 20px; accent-color: var(--texto); }
+.chave input { width: 20px; height: 20px; accent-color: var(--principal); }
 .fonte { display: flex; gap: 8px; }
 
 .status { min-height: 1.4em; margin: 12px 4px; color: var(--suave); font-size: .92rem; }
@@ -185,7 +183,7 @@ textarea {
   position: relative; padding: 16px 56px 16px 16px; border-radius: 12px;
   background: var(--papel); border: 1px solid var(--borda); transition: border-color .15s;
 }
-.frase.atual { border-color: var(--texto); }
+.frase.atual { border-color: var(--principal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--principal) 25%, transparent); }
 .frase .en { margin: 0; line-height: 1.7; font-family: var(--livro); overflow-wrap: anywhere; }
 .frase .pt { margin: 8px 0 0; color: var(--pt); font: .74em/1.45 var(--ui); }
 .texto.sem-traducao .frase:not(.revelada) .pt { display: none; }
@@ -197,7 +195,7 @@ textarea {
 .pal { cursor: pointer; border-radius: 4px; padding: 0 1px; transition: background .12s; }
 .pal:hover { text-decoration: underline; text-decoration-color: var(--suave); }
 .frase.atual .pal { background: var(--frase); }
-.frase .pal.lendo { background: var(--destaque); color: #1d1b18; }
+.frase .pal.lendo { background: var(--destaque); text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
 
 /* nível 1: cartões com figura (o emoji aqui é conteúdo: ajuda a lembrar a palavra) */
 .texto.cartoes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
