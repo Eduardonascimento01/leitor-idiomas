@@ -118,9 +118,10 @@
   function montarVelocidades() {
     const box = $('velocidades');
     const V = Fala.VELOCIDADES;
-    box.innerHTML = `<div class="vel-topo"><span>Velocidade</span><strong id="velValor"></strong></div>
-      <input id="velBarra" type="range" min="0" max="${V.length - 1}" step="1" aria-label="Velocidade">
-      <div class="vel-marcas">${V.map((v, i) => `<button type="button" data-i="${i}" style="left:calc(${i / (V.length - 1)} * (100% - 24px) + 12px)">${Fala.rotuloVelocidade(v)}</button>`).join('')}</div>`;
+    box.innerHTML = `<div class="vel-linha"><span class="vel-rotulo">Velocidade</span>
+      <div class="vel-trilho"><input id="velBarra" type="range" min="0" max="${V.length - 1}" step="1" aria-label="Velocidade">
+      <div class="vel-marcas">${V.map((v, i) => `<button type="button" data-i="${i}" style="left:calc(${i / (V.length - 1)} * (100% - 18px) + 9px)">${Fala.rotuloVelocidade(v)}</button>`).join('')}</div></div>
+      <strong id="velValor"></strong></div>`;
     const barra = $('velBarra');
     const usar = (i, aplicar) => {
       prefs.velocidade = V[i];
