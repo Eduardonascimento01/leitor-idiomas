@@ -5,6 +5,8 @@
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
+  // Ícone de linha do "sprite" que está no index.html
+  const ic = nome => `<svg class="ic" aria-hidden="true"><use href="#i-${nome}"/></svg>`;
   const sintese = window.speechSynthesis;
   // Reconhecimento de fala: transforma a sua voz em texto (Chrome e Edge; usa a internet)
   const Reconhecer = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -53,7 +55,7 @@
   // ---------- tema e letra ----------
   function aplicarVisual() {
     document.documentElement.dataset.tema = prefs.tema;
-    $('tema').textContent = prefs.tema === 'escuro' ? '☀️' : '🌙';
+    $('tema').innerHTML = ic(prefs.tema === 'escuro' ? 'sun' : 'moon');
     document.documentElement.style.setProperty('--fonte-leitura', prefs.fonte + 'rem');
   }
   $('tema').onclick = () => { prefs.tema = prefs.tema === 'escuro' ? 'claro' : 'escuro'; aplicarVisual(); salvarPrefs(); };
@@ -156,20 +158,56 @@
     const ok = nivel.licoes.filter(l => feitas[l.id]).length;
     return { total, ok };
   }
+  // Qual lição o botão "Continuar" abre: a última que você abriu (se não terminou),
+  // senão a primeira lição ainda não feita, na ordem dos níveis.
+  function proximaLicao() {
+    const ultima = ler('ingles:ultima', null);
+    for (const nv of Conteudo.NIVEIS) {
+      const l = nv.licoes.find(x => ultima && x.id === ultima && !feitas[x.id]);
+      if (l) return { nivel: nv, licao: l };
+    }
+    for (const nv of Conteudo.NIVEIS) {
+      const l = nv.licoes.find(x => !feitas[x.id]);
+      if (l) return { nivel: nv, licao: l };
+    }
+    return null;
+  }
   function montarNiveis() {
+    const alvo = proximaLicao();
+    const cont = $('continuar');
+    cont.innerHTML = '';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'continuar';
+    if (alvo) {
+      const comecou = Object.keys(feitas).length || ler('ingles:ultima', null);
+      b.innerHTML = `<div><small>${comecou ? 'Continuar' : 'Começar'} · Nível ${alvo.nivel.n}</small><strong></strong></div>${ic('arrow')}`;
+      b.querySelector('strong').textContent = alvo.licao.titulo;
+      b.onclick = () => { estado.nivel = alvo.nivel.n; abrirLicao(alvo.nivel, alvo.licao); };
+    } else {
+      b.innerHTML = `<div><small>Todas as lições feitas</small><strong>Abrir o seu livro</strong></div>${ic('arrow')}`;
+      b.onclick = () => abrirNivel(5);
+    }
+    cont.appendChild(b);
+
+    const atual = alvo ? alvo.nivel.n : 5;
     const box = $('listaNiveis');
     box.innerHTML = '';
     for (const nivel of Conteudo.NIVEIS) {
       const { total, ok } = progressoDoNivel(nivel);
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'cartao-nivel';
-      b.innerHTML = `<div class="icone-nivel">${nivel.icone}</div><div style="flex:1;min-width:0">
-        <strong>Nível ${nivel.n}: ${nivel.nome}</strong><span>${nivel.desc}</span>
-        ${total ? `<div class="progresso" title="${ok} de ${total} lições"><i style="width:${(ok / total) * 100}%"></i></div>
-        <span>${ok} de ${total} lições</span>` : ''}</div>`;
-      b.onclick = () => abrirNivel(nivel.n);
-      box.appendChild(b);
+      const completo = total && ok === total;
+      const li = document.createElement('li');
+      const p = document.createElement('button');
+      p.type = 'button';
+      p.className = 'passo' + (nivel.n === atual ? ' atual' : completo ? ' completo' : '');
+      p.innerHTML = `<span class="num">${nivel.n}</span><div class="txt"><strong></strong><span></span>
+        <span class="conta">${total ? `${ok} de ${total} lições` : 'Seu PDF, .txt ou texto colado'}</span></div>`;
+      p.querySelector('strong').textContent = nivel.nome;
+      if (nivel.n === atual) p.querySelector('strong').insertAdjacentHTML('beforeend', '<span class="agora">você está aqui</span>');
+      p.querySelector('.txt > span').textContent = nivel.desc;
+      p.onclick = () => abrirNivel(nivel.n);
+      li.appendChild(p);
+      box.appendChild(li);
     }
   }
 
@@ -177,7 +215,7 @@
   function abrirNivel(n) {
     const nivel = Conteudo.NIVEIS.find(x => x.n === n);
     estado.nivel = n;
-    $('tituloNivel').textContent = `${nivel.icone} Nível ${n}: ${nivel.nome}`;
+    $('tituloNivel').textContent = `Nível ${n} · ${nivel.nome}`;
     $('descNivel').textContent = nivel.desc;
     const box = $('listaLicoes');
     box.innerHTML = '';
@@ -186,15 +224,15 @@
       const s = document.createElement('p');
       s.className = 'sugestao';
       s.style.gridColumn = '1 / -1';
-      s.textContent = `🎉 Você terminou todas as lições deste nível! Pode repetir para fixar, ou subir para o nível ${n + 1}.`;
+      s.textContent = `Você terminou todas as lições deste nível. Pode repetir para fixar ou subir para o nível ${n + 1}.`;
       box.appendChild(s);
     }
     nivel.licoes.forEach((licao, i) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'cartao-licao' + (feitas[licao.id] ? ' feita' : '');
-      b.innerHTML = `<div><strong>${i + 1}. ${licao.titulo}</strong><span>${licao.frases.length} ${n === 1 ? 'palavras' : 'frases'}</span></div>
-        ${feitas[licao.id] ? '<span class="check">✓</span>' : ''}`;
+      b.innerHTML = `<span class="n">${i + 1}</span><div><strong>${licao.titulo}</strong><span>${licao.frases.length} ${n === 1 ? 'palavras' : 'frases'}</span></div>
+        ${feitas[licao.id] ? `<span class="check" title="Feita">${ic('check')}</span>` : ''}`;
       b.onclick = () => abrirLicao(nivel, licao);
       box.appendChild(b);
     });
@@ -211,13 +249,14 @@
     $('optRepita').checked = prefs.repitaComigo;
     marcarVelocidade();
     $('tituloLicao').textContent = titulo;
-    status(nivel.n === 1 ? 'Aperte ▶ para ouvir. Toque numa palavra para ver os detalhes.'
-      : 'Aperte ▶ para ouvir. Toque numa palavra para ver a tradução e salvar no caderno.');
+    status(nivel.n === 1 ? 'Aperte o play para ouvir. Toque numa palavra para ver os detalhes.'
+      : 'Aperte o play para ouvir. Toque numa palavra para ver a tradução e salvar no caderno.');
   }
 
   function abrirLicao(nivel, licao) {
     estado.licao = licao;
     estado.livro = null;
+    gravar('ingles:ultima', licao.id);     // para o botão "Continuar" da tela inicial
     prepararLeitura(nivel, licao.titulo);
     usarFrases(licao.frases.map(([en, pt, emoji]) => ({ en, pt, emoji })), nivel.n === 1);
     $('paginacao').hidden = true;
@@ -368,7 +407,7 @@
         estado.ultimaLida = s;
         if (ultima) { terminou(); estado.s = 0; estado.w = 0; return; }
         estado.s = s + 1; estado.w = 0;
-        if (!soUma) status('Frase terminada. ▶ vai para a próxima, 🔁 repete esta.');
+        if (!soUma) status('Frase terminada. O play vai para a próxima; Repetir repete esta.');
         return;
       }
       await esperar(Fala.planoDaVelocidade(prefs.velocidade).pausaFrase);
@@ -387,13 +426,13 @@
   }
   function reiniciarSeLendo() { if (estado.lendo) tocarDe(estado.s, estado.w); }
   function botaoTocar() {
-    $('tocar').textContent = estado.lendo ? '⏸' : '▶';
+    $('tocar').innerHTML = ic(estado.lendo ? 'pause' : 'play');
     $('tocar').setAttribute('aria-label', estado.lendo ? 'Pausar' : 'Ler');
   }
 
   function terminou() {
     status('');
-    if (estado.livro) { status('Fim da página. Use "Página ▶" para continuar.'); return; }
+    if (estado.livro) { status('Fim da página. Use "Página" para continuar.'); return; }
     if (!estado.licao) return;
     const primeiraVez = !feitas[estado.licao.id];
     feitas[estado.licao.id] = true;
@@ -403,14 +442,16 @@
     const proxima = nivel.licoes[idx + 1];
     const fim = document.createElement('div');
     fim.className = 'fim';
-    fim.innerHTML = `<strong>🎉 Lição concluída!</strong><br>${primeiraVez ? 'Dica: ouça de novo amanhã, repetindo em voz alta.' : 'Repetir é o que fixa. Muito bem!'}<br>`;
+    const qtd = estado.licao.frases.length;
+    fim.innerHTML = `<strong>Lição concluída</strong><br>${qtd} ${estado.nivel === 1 ? 'palavras' : 'frases'}. ${primeiraVez ? 'Ouça de novo amanhã, repetindo em voz alta.' : 'Repetir é o que fixa.'}<br>`;
     const de = document.createElement('button');
-    de.className = 'botao'; de.type = 'button'; de.textContent = '🔁 Ouvir de novo';
+    de.className = 'botao'; de.type = 'button'; de.innerHTML = ic('repeat') + ' Ouvir de novo';
     de.onclick = () => { fim.remove(); tocarDe(0, 0); };
     fim.appendChild(de);
     if (proxima) {
       const px = document.createElement('button');
-      px.className = 'botao principal'; px.type = 'button'; px.textContent = `Próxima: ${proxima.titulo} →`;
+      px.className = 'botao principal'; px.type = 'button'; px.textContent = `Próxima: ${proxima.titulo}`;
+      px.insertAdjacentHTML('beforeend', ic('arrow'));
       px.onclick = () => abrirLicao(nivel, proxima);
       fim.appendChild(px);
     } else {
@@ -424,11 +465,11 @@
       if (novas.length) {
         const cd = document.createElement('button');
         cd.className = 'botao'; cd.type = 'button';
-        cd.textContent = `⭐ Pôr as ${novas.length} palavras no caderno (para revisar)`;
+        cd.innerHTML = `${ic('bookmark')} Pôr as ${novas.length} palavras no caderno`;
         cd.onclick = () => {
           for (const [en, pt] of novas) if (!noCaderno(en)) caderno.push({ en, pt, frase: '', data: Treino.hojeISO() });
           salvarCaderno();
-          cd.disabled = true; cd.textContent = '✅ No caderno! Revise amanhã em 📒 Caderno.';
+          cd.disabled = true; cd.innerHTML = `${ic('check')} No caderno. Já dá para revisar.`;
         };
         fim.appendChild(cd);
       }
@@ -460,7 +501,7 @@
       r.onerror = e => {
         erro = e.error === 'not-allowed' || e.error === 'service-not-allowed'
           ? 'O navegador não deixou usar o microfone. Clique no cadeado ao lado do endereço e permita o microfone.'
-          : e.error === 'no-speech' ? 'Não ouvi nada. Aperte 🎤 e fale logo depois.'
+          : e.error === 'no-speech' ? 'Não ouvi nada. Aperte Falar e fale logo depois.'
           : e.error === 'network' ? 'O reconhecimento de fala precisa de internet.'
           : e.error === 'aborted' ? null : 'O microfone deu erro (' + e.error + ').';
       };
@@ -491,14 +532,14 @@
     const spans = estado.elPalavras[s];
     spans.forEach(sp => sp.classList.remove('certa', 'errada'));
     estado.elFrases[s].classList.add('atual');
-    status('🎙️ Sua vez! Fale a frase em inglês...');
+    status('Sua vez: fale a frase em inglês.');
     const r = await ouvirVoce($('falarEu'));
     if (g !== undefined && g !== estado.geracao) return;
     if (r.erro) { status(r.erro); return; }
     const { certos, ouvido } = melhorResultado(f.ps, r.frases);
     certos.forEach((ok, i) => spans[i].classList.add(ok ? 'certa' : 'errada'));
     const n = Treino.nota(certos);
-    status(`${n.msg} ${n.ok} de ${n.total} palavras. Eu entendi: "${ouvido || '...'}"`);
+    status(`${n.ok} de ${n.total} palavras certas. ${n.msg} Entendi: "${ouvido || '...'}"`);
     if (g !== undefined) await esperar(1800);   // dá tempo de ver o resultado antes de seguir
   }
   $('falarEu').onclick = () => {
@@ -611,13 +652,13 @@
   $('jFalar').onclick = async () => {
     if ($('jFalar').classList.contains('ouvindo')) { pararMicrofone(); return; }
     const alvo = palavraAberta.en;
-    $('jResultado').textContent = '🎙️ Fale a palavra...';
+    $('jResultado').textContent = 'Fale a palavra.';
     const r = await ouvirVoce($('jFalar'));
     if (!palavraAberta || palavraAberta.en !== alvo) return;
     if (r.erro) { $('jResultado').textContent = r.erro; return; }
     const { certos, ouvido } = melhorResultado(Fala.palavras(alvo), r.frases);
-    $('jResultado').textContent = certos.every(Boolean) ? '✅ Certo! Muito bem.'
-      : `❌ Eu entendi "${ouvido || '...'}". Ouça de novo e tente outra vez.`;
+    $('jResultado').textContent = certos.every(Boolean) ? 'Certo.'
+      : `Entendi "${ouvido || '...'}". Ouça de novo e tente outra vez.`;
   };
   $('jFechar').onclick = fecharJanela;
   $('janela').addEventListener('click', e => { if (e.target === $('janela')) fecharJanela(); });
@@ -629,7 +670,7 @@
   const noCaderno = en => caderno.some(c => c.en.toLowerCase() === en.toLowerCase());
   function atualizarBotaoSalvar() {
     const ja = palavraAberta && noCaderno(palavraAberta.en);
-    $('jSalvar').textContent = ja ? '✅ Já está no caderno' : '⭐ Salvar no caderno';
+    $('jSalvar').innerHTML = ja ? `${ic('check')} Já está no caderno` : `${ic('bookmark')} Salvar no caderno`;
     $('jSalvar').disabled = !!ja;
   }
   $('jSalvar').onclick = () => {
@@ -641,14 +682,14 @@
   function contarCaderno() {
     $('contaCaderno').textContent = caderno.length;
     const n = Treino.paraRevisar(caderno, Treino.hojeISO()).length;
-    $('revisar').textContent = n ? `🧠 Revisar agora (${n} ${n === 1 ? 'palavra' : 'palavras'})` : '🧠 Nada para revisar hoje';
+    $('revisar').innerHTML = ic('cards') + (n ? ` Revisar agora · ${n} ${n === 1 ? 'palavra' : 'palavras'}` : ' Nada para revisar hoje');
     $('revisar').disabled = !n;
     const aviso = $('avisoRevisao');
     aviso.hidden = !n;
     aviso.innerHTML = '';
     if (n) {
       const t = document.createElement('span');
-      t.textContent = `🧠 Você tem ${n} ${n === 1 ? 'palavra' : 'palavras'} para revisar hoje.`;
+      t.textContent = `${n} ${n === 1 ? 'palavra' : 'palavras'} para revisar hoje.`;
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'botao principal'; b.textContent = 'Revisar';
       b.onclick = () => { telaAnterior = 'telaNiveis'; comecarRevisao(); };
@@ -700,7 +741,7 @@
     const fim = $('revFim');
     const amanha = Treino.somarDias(Treino.hojeISO(), 1);
     const nAmanha = Treino.paraRevisar(caderno, amanha).length;
-    fim.innerHTML = `<strong>🎉 Revisão de hoje concluída!</strong><br>${rev.feitas} ${rev.feitas === 1 ? 'palavra revisada' : 'palavras revisadas'}.
+    fim.innerHTML = `<strong>Revisão de hoje concluída</strong><br>${rev.feitas} ${rev.feitas === 1 ? 'palavra revisada' : 'palavras revisadas'}.
       ${nAmanha ? `Amanhã voltam ${nAmanha}.` : 'Amanhã não tem nada para revisar.'}<br>`;
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'botao principal'; b.textContent = 'Voltar ao caderno';
@@ -717,25 +758,25 @@
   $('fcFalar').onclick = async () => {
     if ($('fcFalar').classList.contains('ouvindo')) { pararMicrofone(); return; }
     const alvo = rev.atual;
-    $('fcFala').textContent = '🎙️ Fale a palavra...';
+    $('fcFala').textContent = 'Fale a palavra.';
     const r = await ouvirVoce($('fcFalar'));
     if (rev.atual !== alvo) return;
     if (r.erro) { $('fcFala').textContent = r.erro; return; }
     const { certos, ouvido } = melhorResultado(Fala.palavras(alvo.en), r.frases);
-    $('fcFala').textContent = certos.every(Boolean) ? '✅ Pronúncia certa!' : `❌ Eu entendi "${ouvido || '...'}". Tente de novo.`;
+    $('fcFala').textContent = certos.every(Boolean) ? 'Pronúncia certa.' : `Entendi "${ouvido || '...'}". Tente de novo.`;
   };
   function montarCaderno() {
     const box = $('listaCaderno');
     box.innerHTML = '';
     if (!caderno.length) {
-      box.innerHTML = '<p class="vazio">Ainda vazio. Durante a leitura, toque numa palavra e depois em ⭐ Salvar no caderno.</p>';
+      box.innerHTML = '<p class="vazio">Ainda vazio. Durante a leitura, toque numa palavra e depois em Salvar no caderno.</p>';
       return;
     }
     caderno.forEach((c, i) => {
       const item = document.createElement('div');
       item.className = 'item-caderno';
       const ouvir = document.createElement('button');
-      ouvir.className = 'botao icone'; ouvir.type = 'button'; ouvir.textContent = '▶';
+      ouvir.className = 'botao icone'; ouvir.type = 'button'; ouvir.innerHTML = ic('play');
       ouvir.setAttribute('aria-label', 'Ouvir ' + c.en);
       ouvir.onclick = () => { sintese && sintese.cancel(); falar(c.en, 0.85); };
       const txt = document.createElement('div');
@@ -748,7 +789,7 @@
         : c.proxima <= Treino.hojeISO() ? 'Revisar hoje' : 'Próxima revisão: ' + c.proxima.split('-').reverse().slice(0, 2).join('/');
       txt.append(forte, pt, fr, quando);
       const tirar = document.createElement('button');
-      tirar.className = 'botao icone'; tirar.type = 'button'; tirar.textContent = '🗑';
+      tirar.className = 'botao icone'; tirar.type = 'button'; tirar.innerHTML = ic('trash');
       tirar.setAttribute('aria-label', 'Tirar ' + c.en + ' do caderno');
       tirar.onclick = () => { caderno.splice(i, 1); salvarCaderno(); montarCaderno(); };
       item.append(ouvir, txt, tirar);

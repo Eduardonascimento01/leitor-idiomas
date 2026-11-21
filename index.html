@@ -5,39 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Leitor de Inglês</title>
   <meta name="description" content="Aprenda inglês ouvindo uma voz nativa, palavra por palavra, com tradução.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='14' width='28' height='12' rx='2' fill='%23ffe066'/><text x='16' y='24' font-family='Georgia' font-size='20' text-anchor='middle' fill='%231d1b18'>En</text></svg>">
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
+  <!-- Ícones de linha (SVG), todos no mesmo estilo: usados com <svg class="ic"><use href="#i-nome"/></svg> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24"><path d="M18 19 9 12l9-7zM6 5v14"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="m6 5 9 7-9 7zM18 5v14"/></symbol>
+      <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+      <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="7" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></symbol>
+    </defs>
+  </svg>
+
   <header class="topo">
-    <button id="inicio" class="marca" type="button">🗣️ Leitor de Inglês</button>
+    <button id="inicio" class="marca" type="button">Leitor de <span class="marca-texto">Inglês</span></button>
     <div class="acoes">
-      <button id="abrirCaderno" class="botao" type="button">📒 Caderno <span id="contaCaderno" class="bolinha">0</span></button>
-      <button id="tema" class="botao icone" type="button" aria-label="Trocar tema">🌙</button>
+      <button id="abrirCaderno" class="botao" type="button"><svg class="ic"><use href="#i-book"/></svg><span class="rotulo-topo">Caderno</span> <span id="contaCaderno" class="bolinha">0</span></button>
+      <button id="tema" class="botao icone" type="button" aria-label="Trocar tema"><svg class="ic"><use href="#i-moon"/></svg></button>
     </div>
   </header>
 
   <main class="conteudo">
-    <!-- Tela 1: escolher o nível -->
+    <!-- Tela 1: trilha de níveis -->
     <section id="telaNiveis">
-      <h1 class="titulo">Escolha o seu nível</h1>
-      <p class="intro">Comece pelo 1 se você sabe pouco inglês. Cada nível já vem com a velocidade e a tradução certas, e você pode mudar quando quiser.</p>
-      <div id="avisoRevisao" class="sugestao revisao-hoje" hidden></div>
-      <div id="listaNiveis" class="niveis"></div>
+      <h1 class="titulo">Seu inglês, passo a passo</h1>
+      <p class="intro">Cinco níveis, do zero ao livro de verdade. Cada nível já vem com a velocidade e a tradução certas.</p>
+      <div id="continuar"></div>
+      <div id="avisoRevisao" class="aviso" hidden></div>
+      <ol id="listaNiveis" class="trilha"></ol>
     </section>
 
     <!-- Tela 2: lições do nível -->
     <section id="telaLicoes" hidden>
-      <button id="voltarNiveis" class="botao" type="button">← Níveis</button>
+      <button id="voltarNiveis" class="botao" type="button"><svg class="ic"><use href="#i-back"/></svg> Níveis</button>
       <h1 id="tituloNivel" class="titulo"></h1>
       <p id="descNivel" class="intro"></p>
       <div id="listaLicoes" class="licoes"></div>
       <div id="livro" class="livro" hidden>
-        <label class="botao principal" for="entrada">📂 Abrir PDF ou .txt</label>
+        <label class="botao principal" for="entrada"><svg class="ic"><use href="#i-folder"/></svg> Abrir PDF ou .txt</label>
         <input id="entrada" type="file" accept=".pdf,.txt,text/plain,application/pdf" hidden>
         <p class="ou">ou cole um texto em inglês:</p>
-        <textarea id="colado" rows="6" placeholder="Paste your English text here..."></textarea>
-        <button id="lerColado" class="botao principal" type="button">▶ Ler este texto</button>
+        <textarea id="colado" rows="6" placeholder="Paste your English text here"></textarea>
+        <button id="lerColado" class="botao principal" type="button"><svg class="ic"><use href="#i-play"/></svg> Ler este texto</button>
         <p id="statusLivro" class="status" role="status"></p>
       </div>
     </section>
@@ -45,32 +71,32 @@
     <!-- Tela 3: leitura -->
     <section id="telaLeitura" hidden>
       <div class="barra-licao">
-        <button id="voltarLicoes" class="botao icone" type="button" aria-label="Voltar">←</button>
+        <button id="voltarLicoes" class="botao icone" type="button" aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button>
         <h1 id="tituloLicao" class="titulo pequeno"></h1>
       </div>
 
       <nav class="controles" aria-label="Controles de leitura">
         <div class="linha-play">
-          <button id="fraseAnt" class="botao icone" type="button" aria-label="Frase anterior" title="Frase anterior (←)">⏮</button>
-          <button id="tocar" class="botao icone grande" type="button" aria-label="Ler" title="Ler / pausar (espaço)">▶</button>
-          <button id="fraseProx" class="botao icone" type="button" aria-label="Próxima frase" title="Próxima frase (→)">⏭</button>
-          <button id="repetir" class="botao" type="button" title="Repetir a frase (R)" aria-label="Repetir a frase">🔁<span class="rotulo"> Repetir</span></button>
-          <button id="falarEu" class="botao microfone" type="button" title="Falar a frase no microfone (M)" aria-label="Falar a frase no microfone">🎤<span class="rotulo"> Falar</span></button>
+          <button id="fraseAnt" class="botao icone" type="button" aria-label="Frase anterior" title="Frase anterior (←)"><svg class="ic"><use href="#i-prev"/></svg></button>
+          <button id="tocar" class="botao icone grande" type="button" aria-label="Ler" title="Ler / pausar (espaço)"><svg class="ic"><use href="#i-play"/></svg></button>
+          <button id="fraseProx" class="botao icone" type="button" aria-label="Próxima frase" title="Próxima frase (→)"><svg class="ic"><use href="#i-next"/></svg></button>
+          <button id="repetir" class="botao" type="button" title="Repetir a frase (R)" aria-label="Repetir a frase"><svg class="ic"><use href="#i-repeat"/></svg><span class="rotulo"> Repetir</span></button>
+          <button id="falarEu" class="botao microfone" type="button" title="Falar a frase no microfone (M)" aria-label="Falar a frase no microfone"><svg class="ic"><use href="#i-mic"/></svg><span class="rotulo"> Falar</span></button>
         </div>
         <div id="velocidades" class="velocidades" role="radiogroup" aria-label="Velocidade"></div>
         <p id="explicaVel" class="explica-vel"></p>
       </nav>
 
       <details class="ajustes">
-        <summary>⚙️ Voz e opções</summary>
+        <summary><svg class="ic"><use href="#i-sliders"/></svg> Voz e opções</summary>
         <div class="ajustes-corpo">
           <label class="campo">Voz
             <select id="voz"></select>
           </label>
-          <button id="testarVoz" class="botao" type="button">🔊 Testar voz</button>
+          <button id="testarVoz" class="botao" type="button"><svg class="ic"><use href="#i-volume"/></svg> Testar voz</button>
           <label class="chave"><input id="optTraducao" type="checkbox"> Mostrar tradução</label>
           <label class="chave"><input id="optParar" type="checkbox"> Parar depois de cada frase</label>
-          <label class="chave"><input id="optRepita" type="checkbox"> 🎤 Repita comigo (o microfone abre depois de cada frase)</label>
+          <label class="chave"><input id="optRepita" type="checkbox"> Repita comigo (o microfone abre depois de cada frase)</label>
           <div class="fonte">
             <button id="fonteMenos" class="botao icone" type="button" aria-label="Letra menor">A−</button>
             <button id="fonteMais" class="botao icone" type="button" aria-label="Letra maior">A+</button>
@@ -81,22 +107,22 @@
       <p id="status" class="status" role="status" aria-live="polite"></p>
       <div id="texto" class="texto"></div>
       <div id="paginacao" class="paginacao" hidden>
-        <button id="pagAnt" class="botao" type="button">◀ Página</button>
+        <button id="pagAnt" class="botao" type="button"><svg class="ic"><use href="#i-back"/></svg> Página</button>
         <span id="pagInfo"></span>
-        <button id="pagProx" class="botao" type="button">Página ▶</button>
+        <button id="pagProx" class="botao" type="button">Página <svg class="ic"><use href="#i-arrow"/></svg></button>
       </div>
     </section>
 
     <!-- Tela 5: revisão com flashcards -->
     <section id="telaRevisao" hidden>
-      <button id="voltarDaRevisao" class="botao" type="button">← Caderno</button>
-      <h1 class="titulo">🧠 Revisão</h1>
+      <button id="voltarDaRevisao" class="botao" type="button"><svg class="ic"><use href="#i-back"/></svg> Caderno</button>
+      <h1 class="titulo">Revisão</h1>
       <p id="revInfo" class="intro"></p>
       <div id="cartao" class="flashcard">
         <p id="fcEn" class="fc-en" lang="en"></p>
         <div class="j-botoes centro">
-          <button id="fcOuvir" class="botao" type="button">▶ Ouvir</button>
-          <button id="fcFalar" class="botao microfone" type="button">🎤 Falar</button>
+          <button id="fcOuvir" class="botao" type="button"><svg class="ic"><use href="#i-play"/></svg> Ouvir</button>
+          <button id="fcFalar" class="botao microfone" type="button"><svg class="ic"><use href="#i-mic"/></svg> Falar</button>
         </div>
         <p id="fcFala" class="fc-fala"></p>
         <div id="fcResposta" hidden>
@@ -105,8 +131,8 @@
         </div>
         <button id="fcMostrar" class="botao principal" type="button">Mostrar a tradução</button>
         <div id="fcBotoes" class="j-botoes centro" hidden>
-          <button id="fcErrei" class="botao" type="button">😕 Errei</button>
-          <button id="fcAcertei" class="botao principal" type="button">🙂 Acertei</button>
+          <button id="fcErrei" class="botao" type="button">Errei</button>
+          <button id="fcAcertei" class="botao principal" type="button">Acertei</button>
         </div>
       </div>
       <div id="revFim" class="fim" hidden></div>
@@ -114,31 +140,31 @@
 
     <!-- Tela 4: caderno de palavras -->
     <section id="telaCaderno" hidden>
-      <button id="voltarDoCaderno" class="botao" type="button">← Voltar</button>
-      <h1 class="titulo">📒 Meu caderno de palavras</h1>
-      <p class="intro">As palavras que você salvou. Toque em ▶ para ouvir de novo.</p>
-      <button id="revisar" class="botao principal" type="button">🧠 Revisar</button>
+      <button id="voltarDoCaderno" class="botao" type="button"><svg class="ic"><use href="#i-back"/></svg> Voltar</button>
+      <h1 class="titulo">Caderno de palavras</h1>
+      <p class="intro">As palavras que você salvou. Toque no play para ouvir de novo.</p>
+      <button id="revisar" class="botao principal" type="button"><svg class="ic"><use href="#i-cards"/></svg> Revisar</button>
       <div id="listaCaderno" class="caderno"></div>
     </section>
   </main>
 
   <dialog id="janela" class="janela">
     <div class="janela-topo">
-      <strong id="jPalavra" class="j-palavra"></strong>
-      <button id="jFechar" class="botao icone" type="button" aria-label="Fechar">✕</button>
+      <strong id="jPalavra" class="j-palavra" lang="en"></strong>
+      <button id="jFechar" class="botao icone" type="button" aria-label="Fechar"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <p id="jIpa" class="j-ipa"></p>
     <div class="j-botoes">
-      <button id="jOuvir" class="botao principal" type="button">▶ Ouvir</button>
-      <button id="jDevagar" class="botao" type="button">🐢 Devagar</button>
-      <button id="jFalar" class="botao microfone" type="button">🎤 Falar</button>
+      <button id="jOuvir" class="botao principal" type="button"><svg class="ic"><use href="#i-play"/></svg> Ouvir</button>
+      <button id="jDevagar" class="botao" type="button">Devagar</button>
+      <button id="jFalar" class="botao microfone" type="button"><svg class="ic"><use href="#i-mic"/></svg> Falar</button>
     </div>
     <p id="jResultado" class="j-resultado"></p>
     <p class="j-rotulo">Tradução</p>
     <p id="jTraducao" class="j-traducao"></p>
     <div class="j-botoes">
-      <button id="jSalvar" class="botao" type="button">⭐ Salvar no caderno</button>
-      <button id="jLerDaqui" class="botao" type="button">▶ Ler a partir daqui</button>
+      <button id="jSalvar" class="botao" type="button"><svg class="ic"><use href="#i-bookmark"/></svg> Salvar no caderno</button>
+      <button id="jLerDaqui" class="botao" type="button"><svg class="ic"><use href="#i-play"/></svg> Ler a partir daqui</button>
     </div>
   </dialog>
 

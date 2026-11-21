@@ -66,8 +66,8 @@
     const total = certos.length || 1;
     const ok = certos.filter(Boolean).length;
     const n = ok / total;
-    const msg = n === 1 ? 'Perfeito! 🎉' : n >= 0.8 ? 'Muito bem! Quase tudo certo.'
-      : n >= 0.5 ? 'Bom começo! Ouça de novo as palavras em vermelho.' : 'Vamos de novo, devagar. Você consegue!';
+    const msg = n === 1 ? 'Tudo certo.' : n >= 0.8 ? 'Quase tudo certo.'
+      : n >= 0.5 ? 'Ouça de novo as palavras em vermelho.' : 'Ouça a frase de novo e repita devagar.';
     return { ok, total: certos.length, n, msg };
   }
 

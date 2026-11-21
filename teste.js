@@ -108,7 +108,7 @@ const T = require('./treino.js');
 teste('repita comigo: frase igual = tudo certo', () => {
   const c = T.compararFala(['Hello!', 'My', 'name', 'is', 'Eduardo.'], 'hello my name is Eduardo');
   assert.deepStrictEqual(c, [true, true, true, true, true]);
-  assert.strictEqual(T.nota(c).msg, 'Perfeito! 🎉');
+  assert.strictEqual(T.nota(c).msg, 'Tudo certo.');
 });
 
 teste('repita comigo: palavra trocada fica vermelha, o resto continua certo', () => {
