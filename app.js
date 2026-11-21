@@ -55,7 +55,7 @@
   // ---------- tema e letra ----------
   function aplicarVisual() {
     document.documentElement.dataset.tema = prefs.tema;
-    $('tema').innerHTML = ic(prefs.tema === 'escuro' ? 'sun' : 'moon');
+    $('tema').innerHTML = `<span class="emoji-btn" aria-hidden="true">${prefs.tema === 'escuro' ? '☀️' : '🌙'}</span>`;
     document.documentElement.style.setProperty('--fonte-leitura', prefs.fonte + 'rem');
   }
   $('tema').onclick = () => { prefs.tema = prefs.tema === 'escuro' ? 'claro' : 'escuro'; aplicarVisual(); salvarPrefs(); };
@@ -201,7 +201,9 @@
       p.type = 'button';
       p.className = 'passo' + (nivel.n === atual ? ' atual' : completo ? ' completo' : '');
       p.innerHTML = `<span class="num">${nivel.n}</span><div class="txt"><strong></strong><span></span>
-        <span class="conta">${total ? `${ok} de ${total} lições` : 'Seu PDF, .txt ou texto colado'}</span></div>`;
+        <span class="conta">${total ? `${ok} de ${total} lições` : 'Seu PDF, .txt ou texto colado'}</span>
+        ${total ? `<div class="barra"><i style="width:${(ok / total) * 100}%"></i></div>` : ''}</div>`;
+      p.dataset.n = nivel.n;
       p.querySelector('strong').textContent = nivel.nome;
       if (nivel.n === atual) p.querySelector('strong').insertAdjacentHTML('beforeend', '<span class="agora">você está aqui</span>');
       p.querySelector('.txt > span').textContent = nivel.desc;

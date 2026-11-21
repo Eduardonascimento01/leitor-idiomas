@@ -13,6 +13,8 @@
   --principal-texto: #ffffff;
   --pt: #6b4fbb;             /* português */
   --titulo: #1f2733;
+  --azul-claro: #e3edff;     /* outro tom de azul: botões do topo */
+  --azul-borda: #b9d0fb;
   --ok: #16a34a;
   --erro: #dc2626;
   --fonte-leitura: 1.35rem;
@@ -33,6 +35,8 @@
   --principal-texto: #ffffff;
   --pt: #b9a4ff;
   --titulo: #e7eaf0;
+  --azul-claro: #1c3157;
+  --azul-borda: #2c4f8f;
   --ok: #3ccf74;
   --erro: #f87171;
   color-scheme: dark;
@@ -54,18 +58,22 @@ body {
 .grande .ic { width: 24px; height: 24px; }
 
 /* ---------- topo ---------- */
-/* título no centro: tema à esquerda, caderno à direita (colunas iguais nas pontas) */
+/* título no centro da tela; os 2 botões juntos à direita, em azul claro */
 .topo {
-  display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center;
+  position: relative; display: flex; justify-content: flex-end; align-items: center; min-height: 68px;
   padding: 12px 16px; background: var(--papel); border-bottom: 1px solid var(--borda);
 }
-#tema { justify-self: start; }
 .marca {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   background: none; border: 0; color: var(--titulo); cursor: pointer; padding: 4px 0; text-align: center;
   font: 700 1.6rem/1.1 var(--ui); white-space: nowrap;
 }
-.acoes { display: flex; gap: 8px; justify-self: end; }
-.bolinha { color: var(--suave); font-variant-numeric: tabular-nums; }
+.acoes { display: flex; gap: 8px; }
+.botao.topo-btn { position: relative; background: var(--azul-claro); border-color: var(--azul-borda); color: var(--titulo); }
+.botao.topo-btn:hover { border-color: var(--principal); }
+.emoji-btn { font-size: 1.25rem; line-height: 1; }
+.bolinha { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--principal); color: #fff;
+  font: 700 .75rem/20px var(--ui); text-align: center; font-variant-numeric: tabular-nums; }
 
 .conteudo { max-width: 820px; margin: 0 auto; padding: 16px 16px 96px; }
 .titulo { font: 700 2.3rem/1.15 var(--ui); color: var(--titulo); margin: 16px 0 8px; }
@@ -253,11 +261,32 @@ textarea {
 .fc-frase { margin: 8px 0 0; color: var(--suave); font-family: var(--livro); font-style: italic; }
 .j-botoes.centro { justify-content: center; }
 
+/* ---------- níveis em cartões (opção A, escolhida pelo Eduardo) ---------- */
+.passo .barra { display: none; height: 6px; margin-top: 8px; border-radius: 3px; background: var(--borda); overflow: hidden; }
+.passo .barra i { display: block; height: 100%; background: var(--ok); }
+
+.trilha { display: grid; gap: 12px; }
+.trilha li::before { display: none; }
+.passo {
+  margin: 0; padding: 16px; align-items: center; background: var(--papel);
+  border: 1px solid var(--borda); border-radius: 16px;
+}
+.passo:hover { border-color: var(--principal); }
+.passo.atual { border: 2px solid var(--principal); }
+.passo .num { border-radius: 14px; width: 56px; height: 56px; font-size: 1.5rem; border: 0;
+  background: color-mix(in srgb, var(--principal) 12%, transparent); color: var(--principal); }
+.passo.atual .num { background: var(--principal); color: #fff; }
+.passo.completo .num { background: var(--ok); color: #fff; }
+.passo .barra { display: block; }
+
+
 @media (max-width: 600px) {
   .conteudo { padding: 12px 16px 80px; }
   .titulo { font-size: 1.95rem; }
   .titulo.pequeno { font-size: 1.3rem; }
-  .marca { font-size: 1.3rem; }
+  .marca { font-size: 1.2rem; left: calc(50% - 30px); }
+  .botao.topo-btn { min-width: 44px; padding: 0 10px; }
+  .topo-btn .bolinha { position: absolute; top: -6px; right: -6px; }
   .rotulo-topo { display: none; }
   .controles { padding: 8px; }
   .velocidades button { font-size: .78rem; }
