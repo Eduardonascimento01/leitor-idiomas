@@ -154,6 +154,32 @@ textarea {
 }
 .livro #lerColado { justify-self: start; }
 
+/* ---------- idioma (Inglês / Espanhol) na tela inicial ---------- */
+.idiomas {
+  display: flex; gap: 4px; padding: 4px; margin: 0 auto 16px; width: fit-content; max-width: 100%;
+  border-radius: 999px; background: var(--azul-claro); border: 1px solid var(--azul-borda);
+}
+.idiomas button {
+  min-width: 112px; padding: 8px 18px; border: 0; border-radius: 999px; cursor: pointer;
+  background: none; color: var(--titulo); font: 600 1rem var(--ui);
+}
+.idiomas button[aria-pressed="true"] { background: var(--principal); color: var(--principal-texto); }
+
+/* ---------- nível 6: seus assuntos ---------- */
+.passo.trancado .num { font-size: 1.1rem; }
+.passo.trancado strong, .passo.trancado .txt > span { opacity: .75; }
+.cartao-assunto { display: flex; gap: 8px; align-items: center; }
+.cartao-assunto .cartao-licao { flex: 1; min-width: 0; }
+.cartao-licao strong { overflow-wrap: anywhere; }
+.assunto-form { display: grid; gap: 8px; max-width: 520px; }
+.rotulo-campo { font-weight: 600; }
+.assunto-form input, .assunto-form select {
+  width: 100%; font: inherit; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--borda); background: var(--papel); color: var(--texto);
+}
+.assunto-form .botao { justify-self: start; margin-top: 4px; }
+@media (max-width: 480px) { .idiomas button { min-width: 0; flex: 1; padding: 8px 12px; } .idiomas { width: 100%; } }
+
 /* ---------- leitura ---------- */
 .barra-licao { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; min-width: 0; }
 .controles {

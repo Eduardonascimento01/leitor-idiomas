@@ -18,8 +18,20 @@
   const NUMEROS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
     'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
 
+  // Espanhol: números por extenso (sem acento, porque a comparação tira os acentos)
+  const NUMEROS_ES = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez',
+    'once', 'doce', 'trece', 'catorce', 'quince', 'dieciseis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte'];
+  // "está" e "esta", "Martín" e "Martin": o reconhecimento às vezes erra o acento, então tiramos dos dois lados
+  const semAcento = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '');
+
   // Uma palavra escrita vira uma ou mais "formas" para comparar: "I'm" -> ["i", "am"]
-  function formas(palavra) {
+  function formas(palavra, idioma = 'en') {
+    if (idioma === 'es') {
+      const p = semAcento(palavra.toLowerCase()).replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+      if (!p) return [];
+      if (/^\d+$/.test(p) && +p <= 20) return [NUMEROS_ES[+p]];
+      return [p];
+    }
     const p = palavra.toLowerCase().replace(/[’‘]/g, "'").replace(/^[^a-z0-9']+|[^a-z0-9']+$/g, '');
     if (!p) return [];
     if (CONTRACOES[p]) return CONTRACOES[p].split(' ');
@@ -29,17 +41,17 @@
   }
   // "dog" e "dogs" contam como a mesma palavra (o reconhecimento confunde o 's' do fim)
   const igual = (a, b) => a === b || a + 's' === b || b + 's' === a;
-  const normalizar = texto => (texto.match(/\S+/g) || []).flatMap(formas);
+  const normalizar = (texto, idioma) => (texto.match(/\S+/g) || []).flatMap(p => formas(p, idioma));
 
   // Compara a frase esperada (palavras como aparecem na tela) com o que foi ouvido.
   // Usa a "maior sequência em comum" (LCS): acha o máximo de palavras que batem
   // na mesma ordem, mesmo que você tenha pulado ou trocado alguma.
   // Devolve, para cada palavra da tela, se você acertou: [true, false, ...]
-  function compararFala(palavrasDaTela, ouvido) {
+  function compararFala(palavrasDaTela, ouvido, idioma = 'en') {
     // cada palavra da tela pode virar várias formas ("I'm" = "i am"): guardamos de qual palavra veio
     const esperadas = [];
-    palavrasDaTela.forEach((p, i) => formas(p).forEach(f => esperadas.push({ f, i })));
-    const ouv = normalizar(ouvido || '');
+    palavrasDaTela.forEach((p, i) => formas(p, idioma).forEach(f => esperadas.push({ f, i })));
+    const ouv = normalizar(ouvido || '', idioma);
     const n = esperadas.length, m = ouv.length;
     const t = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
     for (let a = n - 1; a >= 0; a--) {

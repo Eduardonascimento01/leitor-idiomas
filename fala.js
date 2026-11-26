@@ -1,6 +1,6 @@
 // fala.js: a lógica da leitura que não depende da tela.
 // Decide COMO falar em cada velocidade, divide texto em frases e
-// escolhe as vozes em inglês. Por não mexer na tela, dá para testar no Node (teste.js).
+// escolhe as vozes do idioma (inglês ou espanhol). Por não mexer na tela, dá para testar no Node (teste.js).
 (function (raiz) {
   'use strict';
 
@@ -31,7 +31,8 @@
   function dividirFrases(texto, max = 25) {
     const limpo = (texto || '').replace(/\s+/g, ' ').trim();
     if (!limpo) return [];
-    const brutas = limpo.split(/(?<=[.!?…]["”')\]]*)\s+(?=["“'(\[]?[A-Z0-9À-Ý])/);
+    // (a frase em espanhol pode começar com ¿ ou ¡)
+    const brutas = limpo.split(/(?<=[.!?…]["”')\]]*)\s+(?=["“'(\[¿¡]?[A-Z0-9À-ÝÑ])/);
     const frases = [];
     for (const f of brutas) {
       const ps = palavras(f);
@@ -79,27 +80,41 @@
     return tempos;
   }
 
+  // ---------- idiomas ----------
+  // Cada idioma tem: o código, o nome, o sotaque padrão e a ordem dos países das vozes.
+  const IDIOMAS = {
+    en: { codigo: 'en', nome: 'inglês', Nome: 'Inglês', padrao: 'en-US', paises: ['en-US', 'en-GB'],
+      teste: 'Hello! How are you today? I hope you are learning a lot.',
+      // Entre as Natural, as vozes adultas mais claras vêm antes (a "Ana" é voz de criança)
+      preferidas: ['Aria', 'Jenny', 'Guy', 'Ava', 'Andrew', 'Emma', 'Brian', 'Sonia', 'Ryan', 'Libby'] },
+    es: { codigo: 'es', nome: 'espanhol', Nome: 'Espanhol', padrao: 'es-ES', paises: ['es-ES', 'es-MX', 'es-US'],
+      teste: '¡Hola! ¿Cómo estás hoy? Espero que estés aprendiendo mucho.',
+      preferidas: ['Elvira', 'Alvaro', 'Dalia', 'Jorge', 'Ximena', 'Paloma', 'Salome', 'Elena', 'Tomas'] },
+  };
+  const qualIdioma = cod => IDIOMAS[cod] || IDIOMAS.en;
+
   // Idioma da voz: no Android vem "en_US", no PC "en-US"
   const idioma = v => (v.lang || '').replace('_', '-');
-  const ehIngles = v => /^en(-|$)/i.test(idioma(v));
+  const ehDoIdioma = (v, cod) => new RegExp('^' + qualIdioma(cod).codigo + '(-|$)', 'i').test(idioma(v));
+  const ehIngles = v => ehDoIdioma(v, 'en');
 
   // Bandeira em emoji não aparece no Windows (vira "US"), então o país vai escrito
-  const PAISES = { 'en-US': 'EUA', 'en-GB': 'Reino Unido', 'en-AU': 'Austrália', 'en-CA': 'Canadá', 'en-IE': 'Irlanda', 'en-IN': 'Índia', 'en-NZ': 'Nova Zelândia', 'en-ZA': 'África do Sul' };
+  const PAISES = { 'en-US': 'EUA', 'en-GB': 'Reino Unido', 'en-AU': 'Austrália', 'en-CA': 'Canadá', 'en-IE': 'Irlanda', 'en-IN': 'Índia', 'en-NZ': 'Nova Zelândia', 'en-ZA': 'África do Sul',
+    'es-ES': 'Espanha', 'es-MX': 'México', 'es-US': 'EUA', 'es-AR': 'Argentina', 'es-CO': 'Colômbia', 'es-CL': 'Chile', 'es-PE': 'Peru', 'es-VE': 'Venezuela', 'es-UY': 'Uruguai', 'es-CU': 'Cuba', 'es-419': 'América Latina' };
   function rotuloVoz(v) {
     const lang = idioma(v);
-    const nome = v.name.replace(/^Microsoft /, '').replace(/ - English.*$/, '').replace(/ Online \(Natural\)/, ' (natural)');
+    const nome = v.name.replace(/^Microsoft /, '').replace(/ - (English|Spanish).*$/, '').replace(/ Online \(Natural\)/, ' (natural)');
     return `${nome} · ${PAISES[lang] || lang}`;
   }
 
-  // Só inglês. Ordem: Google, depois as "Natural" da Microsoft (soam humanas),
-  // depois o resto; dentro de cada grupo, americano antes de britânico.
-  // Entre as Natural, as vozes adultas mais claras vêm antes (a "Ana" é voz de criança).
-  const PREFERIDAS = ['Aria', 'Jenny', 'Guy', 'Ava', 'Andrew', 'Emma', 'Brian', 'Sonia', 'Ryan', 'Libby'];
-  const preferida = v => { const i = PREFERIDAS.findIndex(n => v.name.includes(n)); return i < 0 ? 99 : i; };
-  function ordenarVozes(todas) {
+  // Só vozes do idioma. Ordem: Google, depois as "Natural" da Microsoft (soam humanas),
+  // depois o resto; dentro de cada grupo, os países na ordem do idioma (ex: americano antes de britânico).
+  function ordenarVozes(todas, cod = 'en') {
+    const I = qualIdioma(cod);
+    const preferida = v => { const i = I.preferidas.findIndex(n => v.name.includes(n)); return i < 0 ? 99 : i; };
     const grupo = v => (/google/i.test(v.name) ? 0 : /natural/i.test(v.name) ? 1 : 2);
-    const pais = v => (idioma(v) === 'en-US' ? 0 : idioma(v) === 'en-GB' ? 1 : 2);
-    return todas.filter(ehIngles).sort((a, b) =>
+    const pais = v => { const i = I.paises.indexOf(idioma(v)); return i < 0 ? 9 : i; };
+    return todas.filter(v => ehDoIdioma(v, cod)).sort((a, b) =>
       grupo(a) - grupo(b) || pais(a) - pais(b) || preferida(a) - preferida(b) || a.name.localeCompare(b.name));
   }
 
@@ -110,10 +125,11 @@
     3: { velocidade: 0.75, traducao: true, pararCadaFrase: true },
     4: { velocidade: 1, traducao: false, pararCadaFrase: false },
     5: { velocidade: 1, traducao: false, pararCadaFrase: false },
+    6: { velocidade: 0.75, traducao: true, pararCadaFrase: true },   // seus assuntos
   };
 
   const api = { VELOCIDADES, planoDaVelocidade, rotuloVelocidade, palavras, limpar, dividirFrases,
-    montarFala, palavraNoChar, temposEstimados, idioma, ehIngles, rotuloVoz, ordenarVozes, PADRAO_NIVEL };
+    montarFala, palavraNoChar, temposEstimados, IDIOMAS, qualIdioma, idioma, ehDoIdioma, ehIngles, rotuloVoz, ordenarVozes, PADRAO_NIVEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.Fala = api;
 })(this);

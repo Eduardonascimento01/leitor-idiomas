@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Leitor de Inglês</title>
-  <meta name="description" content="Aprenda inglês ouvindo uma voz nativa, palavra por palavra, com tradução.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='14' width='28' height='12' rx='2' fill='%232563eb'/><text x='16' y='24' font-family='Georgia' font-size='20' text-anchor='middle' fill='%23ffffff'>En</text></svg>">
+  <title>Leitor de Idiomas</title>
+  <meta name="description" content="Aprenda inglês e espanhol ouvindo uma voz nativa, palavra por palavra, com tradução.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='14' width='28' height='12' rx='2' fill='%232563eb'/><text x='16' y='24' font-family='Georgia' font-size='20' text-anchor='middle' fill='%23ffffff'>Aa</text></svg>">
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
@@ -35,7 +35,7 @@
   </svg>
 
   <header class="topo">
-    <button id="inicio" class="marca" type="button">Leitor de Inglês</button>
+    <button id="inicio" class="marca" type="button">Leitor de Idiomas</button>
     <div class="acoes">
       <button id="abrirCaderno" class="botao topo-btn" type="button" aria-label="Caderno de palavras"><span class="emoji-btn" aria-hidden="true">📒</span><span class="rotulo-topo">Caderno</span><span id="contaCaderno" class="bolinha">0</span></button>
       <button id="tema" class="botao icone topo-btn" type="button" aria-label="Trocar tema"><span class="emoji-btn" aria-hidden="true">🌙</span></button>
@@ -45,7 +45,11 @@
   <main class="conteudo">
     <!-- Tela 1: trilha de níveis -->
     <section id="telaNiveis">
-      <h1 class="titulo">Seu inglês, passo a passo</h1>
+      <div class="idiomas" role="group" aria-label="Idioma que você está estudando">
+        <button type="button" data-idioma="en">Inglês</button>
+        <button type="button" data-idioma="es">Espanhol</button>
+      </div>
+      <h1 id="tituloInicio" class="titulo">Seu inglês, passo a passo</h1>
       <p class="intro">Níveis, do zero ao livro de verdade. Cada nível já vem com a velocidade e a tradução certas.</p>
       <div id="continuar"></div>
       <div id="avisoRevisao" class="aviso" hidden></div>
@@ -61,10 +65,27 @@
       <div id="livro" class="livro" hidden>
         <label class="botao principal" for="entrada"><svg class="ic"><use href="#i-folder"/></svg> Abrir PDF ou .txt</label>
         <input id="entrada" type="file" accept=".pdf,.txt,text/plain,application/pdf" hidden>
-        <p class="ou">ou cole um texto em inglês:</p>
+        <p id="ouCole" class="ou">ou cole um texto em inglês:</p>
         <textarea id="colado" rows="6" placeholder="Paste your English text here"></textarea>
         <button id="lerColado" class="botao principal" type="button"><svg class="ic"><use href="#i-play"/></svg> Ler este texto</button>
         <p id="statusLivro" class="status" role="status"></p>
+      </div>
+      <!-- Nível 6: lição nova sobre um assunto, escrita por uma IA grátis -->
+      <div id="assunto" class="livro" hidden>
+        <p id="assuntoTrava" class="sugestao" hidden></p>
+        <div id="assuntoForm" class="assunto-form">
+          <label class="rotulo-campo" for="assuntoTexto">Sobre o que você quer aprender?</label>
+          <input id="assuntoTexto" type="text" maxlength="80" autocomplete="off" placeholder="Ex: futebol, viagem de avião, no médico">
+          <label class="rotulo-campo" for="assuntoTipo">Tipo de lição</label>
+          <select id="assuntoTipo">
+            <option value="frases">Frases curtas (8 frases)</option>
+            <option value="historia">Historinha (9 frases)</option>
+            <option value="texto">Texto (10 frases)</option>
+          </select>
+          <button id="assuntoCriar" class="botao principal" type="button"><span class="emoji-btn" aria-hidden="true">✨</span> Criar lição</button>
+          <p class="explica-vel">Quem escreve é uma IA grátis (Pollinations). Só o assunto vai para ela: não escreva dados pessoais.</p>
+          <p id="statusAssunto" class="status" role="status" aria-live="polite"></p>
+        </div>
       </div>
     </section>
 
@@ -173,6 +194,8 @@
   <script src="fala.js"></script>
   <script src="treino.js"></script>
   <script src="conteudo.js"></script>
+  <script src="conteudo-es.js"></script>
+  <script src="assunto.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

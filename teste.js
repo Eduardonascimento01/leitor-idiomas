@@ -150,3 +150,61 @@ teste('flashcards: só aparecem as palavras vencidas (e as novas)', () => {
 });
 
 console.log(`\n${ok} testes passaram (com o treino).`);
+
+// ---------- espanhol e lições por assunto (2026-11-26) ----------
+const ES = require('./conteudo-es.js');
+const A = require('./assunto.js');
+
+teste('espanhol: mesmos 5 níveis e mesma quantidade de lições do inglês, ids únicos', () => {
+  assert.deepStrictEqual(ES.NIVEIS.map(n => n.n), NIVEIS.map(n => n.n));
+  ES.NIVEIS.forEach((nv, i) => assert.strictEqual(nv.licoes.length, NIVEIS[i].licoes.length));
+  const ids = ES.NIVEIS.flatMap(n => n.licoes.map(l => l.id));
+  assert.strictEqual(new Set(ids).size, ids.length);
+  for (const id of ids) assert.ok(!NIVEIS.some(n => n.licoes.some(l => l.id === id)), 'id repetido com o inglês: ' + id);
+  for (const nv of ES.NIVEIS) for (const l of nv.licoes) for (const f of l.frases) assert.ok(f[0] && f[1], l.id);
+});
+
+teste('vozes: no espanhol só aparecem vozes em espanhol (Google primeiro, Espanha antes do México)', () => {
+  const v = [
+    { name: 'Microsoft Dalia Online (Natural) - Spanish (Mexico)', lang: 'es-MX' },
+    { name: 'Google español', lang: 'es-ES' },
+    { name: 'Microsoft Elvira Online (Natural) - Spanish (Spain)', lang: 'es-ES' },
+    { name: 'Google US English', lang: 'en-US' },
+    { name: 'Google español de Estados Unidos', lang: 'es_US' },
+  ];
+  const nomes = F.ordenarVozes(v, 'es').map(x => x.name);
+  assert.deepStrictEqual(nomes, ['Google español', 'Google español de Estados Unidos',
+    'Microsoft Elvira Online (Natural) - Spanish (Spain)', 'Microsoft Dalia Online (Natural) - Spanish (Mexico)']);
+  assert.strictEqual(F.rotuloVoz(v[2]), 'Elvira (natural) · Espanha');
+  assert.deepStrictEqual(F.ordenarVozes(v).map(x => x.name), ['Google US English']);   // o inglês continua igual
+});
+
+teste('espanhol: frases que começam com ¿ e ¡ são separadas', () => {
+  assert.deepStrictEqual(F.dividirFrases('Hola. ¿Cómo estás? ¡Muy bien!'), ['Hola.', '¿Cómo estás?', '¡Muy bien!']);
+  assert.strictEqual(F.limpar('¿Cómo'), 'Cómo');
+  assert.strictEqual(F.limpar('niño!'), 'niño');
+});
+
+teste('repita comigo em espanhol: acento não atrapalha e 7 = siete', () => {
+  const tela = F.palavras('¿Dónde está mi teléfono?');
+  assert.ok(T.compararFala(tela, 'donde esta mi telefono', 'es').every(Boolean));
+  assert.ok(T.compararFala(F.palavras('Me despierto a las siete.'), 'me despierto a las 7', 'es').every(Boolean));
+  assert.deepStrictEqual(T.compararFala(F.palavras('Tengo hambre.'), 'tengo hombre', 'es'), [true, false]);
+});
+
+teste('assunto: o pedido para a IA leva o assunto, o idioma e o formato JSON', () => {
+  const m = A.montarPedido('futebol', 'espanhol', 'historia');
+  const tudo = m.map(x => x.content).join(' ');
+  assert.ok(tudo.includes('futebol') && tudo.includes('espanhol') && tudo.includes('"frases"'));
+});
+
+teste('assunto: lê a resposta da IA mesmo com ```json em volta, e recusa resposta ruim', () => {
+  const r = A.lerResposta('Claro!\n```json\n{"titulo":"No estádio","frases":[["Vamos al estadio.","Vamos ao estádio."],["El partido empieza a las ocho.","O jogo começa às oito."],["¡Gol!","Gol!"]]}\n```');
+  assert.strictEqual(r.titulo, 'No estádio');
+  assert.strictEqual(r.frases.length, 3);
+  assert.strictEqual(A.lerResposta('não sei'), null);
+  assert.strictEqual(A.lerResposta('{"titulo":"x","frases":[["só uma","uma"]]}'), null);   // poucas frases
+  assert.strictEqual(A.lerResposta('{"frases": "texto"}'), null);
+});
+
+console.log(`\n${ok} testes passaram (com espanhol e assuntos).`);

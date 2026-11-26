@@ -1,14 +1,16 @@
-# Leitor de Inglês
+# Leitor de Idiomas
 
-Aprenda inglês ouvindo uma **voz nativa**, palavra por palavra, com tradução.
+Aprenda **inglês e espanhol** ouvindo uma **voz nativa**, palavra por palavra, com tradução.
 Projeto irmão do [Leitor de Livros](https://github.com/Eduardonascimento01/leitor-livros).
 
 ## O que faz
-- **5 níveis:** Primeiras palavras, Frases curtas, Historinhas fáceis, Textos adaptados e Livro de verdade (seu PDF, .txt ou texto colado).
-- **Voz nativa em inglês:** só aparecem vozes em inglês. Google (Chrome) primeiro, depois as vozes "Natural" da Microsoft (Edge).
+- **Dois idiomas:** inglês e espanhol, escolhidos no topo da tela inicial. Cada idioma tem o próprio progresso, caderno e voz.
+- **6 níveis:** Primeiras palavras, Frases curtas, Historinhas fáceis, Textos adaptados, Seu Arquivo (seu PDF, .txt ou texto colado) e Seus assuntos.
+- **Nível 6, Seus assuntos:** libera depois das lições dos níveis 1 a 4. Você escreve um assunto (ex: futebol), escolhe o tipo (frases curtas, historinha ou texto) e uma IA grátis escreve a lição, com tradução.
+- **Voz nativa:** só aparecem vozes do idioma escolhido. Google (Chrome) primeiro, depois as vozes "Natural" da Microsoft (Edge). No espanhol, Espanha primeiro e depois México e EUA (dá para trocar em "Voz e opções").
 - **8 velocidades:** 0.25×, 0.5×, 0.75×, 1×, 1.25×, 1.5×, 1.75× e 2×.
   - Abaixo de 1×, a voz fala **palavra por palavra**, e a pausa entre elas cresce quanto mais lento. A voz não é esticada, porque isso distorce o som.
-- **Tocar numa palavra:** ouvir normal ou devagar, ver a tradução e a pronúncia (IPA) e salvar no caderno.
+- **Tocar numa palavra:** ouvir normal ou devagar, ver a tradução e a pronúncia (IPA, só no inglês) e salvar no caderno.
 - **Frase a frase:** opção de parar depois de cada frase e botão 🔁 Repetir.
 - **Tradução:** visível, escondida ou só na frase em que você tocar no botão PT.
 - **🎤 Repita comigo (v2):** você fala a frase no microfone e cada palavra fica verde (certa) ou vermelha (treinar). Pode ser pelo botão 🎤 ou automático depois de cada frase. Também funciona na janela da palavra e nos flashcards.
@@ -25,12 +27,14 @@ Link direto para uma lição: `index.html#licao=2-casa`.
 ## Arquivos
 - `fala.js`: a lógica da leitura (velocidades, frases, vozes), testável no Node
 - `treino.js`: compara a sua fala com a frase e calcula a revisão espaçada, testável no Node
-- `conteudo.js`: os níveis e as lições
+- `conteudo.js` e `conteudo-es.js`: os níveis e as lições (inglês e espanhol)
+- `assunto.js`: pede a lição do nível 6 para a IA e confere a resposta
 - `app.js`: a tela e a voz
 - `texto.js`: transforma o texto do PDF em parágrafos (vem do Leitor de Livros)
 - `teste.js`: rode `node teste.js`
 
 ## Serviços usados (grátis, sem cadastro)
+- [Pollinations](https://github.com/pollinations/pollinations): IA de código aberto que escreve as lições do nível 6 (só funciona pelo site no ar)
 - [MyMemory](https://mymemory.translated.net/): tradução de palavras e frases
 - [Free Dictionary API](https://dictionaryapi.dev/): pronúncia
 - [PDF.js](https://mozilla.github.io/pdf.js/): ler PDF

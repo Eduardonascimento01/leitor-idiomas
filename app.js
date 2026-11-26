@@ -20,13 +20,40 @@
   function gravar(chave, valor) {
     try { localStorage.setItem(chave, JSON.stringify(valor)); } catch { /* modo privado: ignora */ }
   }
+
+  // ---------- idioma (inglês ou espanhol) ----------
+  // Cada idioma guarda as coisas separadas: o progresso do inglês continua nas chaves "ingles:..."
+  // (como sempre foi) e o espanhol usa "espanhol:...". Atalho: #idioma=es no endereço.
+  const pedido = (location.hash.match(/idioma=(en|es)/) || [])[1];
+  if (pedido) gravar('idiomas:atual', pedido);
+  const IDIOMA = ler('idiomas:atual', 'en') === 'es' ? 'es' : 'en';
+  const I = Fala.qualIdioma(IDIOMA);
+  const P = IDIOMA === 'es' ? 'espanhol' : 'ingles';
+
   const prefs = Object.assign({ voz: '', velocidade: 0.25, traducao: true, pararCadaFrase: false,
-    repitaComigo: false, fonte: 1.35, tema: 'claro', nivel: 1 }, ler('ingles:prefs', {}));
-  const salvarPrefs = () => gravar('ingles:prefs', prefs);
-  const feitas = ler('ingles:feitas', {});          // { idDaLicao: true }
-  let caderno = ler('ingles:caderno', []);          // [{ en, pt, frase, data }]
-  const cacheTrad = ler('ingles:traducoes', {});    // { 'en|texto': 'tradução' }
-  const cacheIpa = ler('ingles:ipa', {});           // { palavra: '/ipa/' }
+    repitaComigo: false, fonte: 1.35, tema: 'claro', nivel: 1 }, ler(P + ':prefs', {}));
+  const salvarPrefs = () => gravar(P + ':prefs', prefs);
+  const feitas = ler(P + ':feitas', {});          // { idDaLicao: true }
+  let caderno = ler(P + ':caderno', []);          // [{ en, pt, frase, data }]
+  const cacheTrad = ler(P + ':traducoes', {});    // { 'en|texto': 'tradução' }
+  const cacheIpa = ler(P + ':ipa', {});           // { palavra: '/ipa/' }
+  // Obs.: o campo "en" das frases e do caderno quer dizer "texto no idioma estudado" (no espanhol, é o espanhol)
+
+  // ---------- níveis: os 5 do idioma + o nível 6, "Seus assuntos" ----------
+  const assuntos = ler(P + ':assuntos', []);      // lições que a IA criou para você
+  const BASE = IDIOMA === 'es' ? ConteudoES.NIVEIS : Conteudo.NIVEIS;
+  const NIVEL6 = { n: 6, nome: 'Seus assuntos', icone: '✨', licoes: assuntos,
+    desc: 'Escolha um assunto e a IA cria uma lição sobre ele, no mesmo jeito das outras.' };
+  const NIVEIS = BASE.concat(NIVEL6);
+  // O nível 6 libera quando você termina todas as lições prontas (níveis 1 a 4)
+  const licoesProntas = () => BASE.flatMap(nv => nv.licoes);
+  const liberouAssuntos = () => licoesProntas().every(l => feitas[l.id]);
+  function marcarFeita(licao) {
+    if (!licao || feitas[licao.id]) return false;
+    feitas[licao.id] = true;
+    gravar(P + ':feitas', feitas);
+    return true;
+  }
 
   // ---------- estado da leitura ----------
   const estado = {
@@ -64,12 +91,12 @@
 
   const status = msg => { $('status').textContent = msg || ''; };
 
-  // ---------- vozes em inglês ----------
+  // ---------- vozes do idioma ----------
   let vozes = [];
-  const SEM_VOZ = 'Não achei voz em inglês neste navegador. No PC, use o Chrome ou o Edge; no celular, instale a voz em inglês nas configurações de texto para fala.';
+  const SEM_VOZ = `Não achei voz em ${I.nome} neste navegador. No PC, use o Chrome ou o Edge; no celular, instale a voz em ${I.nome} nas configurações de texto para fala.`;
   function carregarVozes() {
     if (!sintese) return;
-    const lista = Fala.ordenarVozes(sintese.getVoices());
+    const lista = Fala.ordenarVozes(sintese.getVoices(), IDIOMA);
     if (!lista.length) return;
     vozes = lista;
     const sel = $('voz');
@@ -83,6 +110,8 @@
     sel.value = (vozes.find(v => v.name === prefs.voz) || vozes[0]).name;
   }
   const vozAtual = () => vozes.find(v => v.name === $('voz').value) || vozes[0] || null;
+  // O microfone entende melhor no mesmo sotaque da voz escolhida (ex: es-MX)
+  const langDaVoz = () => { const v = vozAtual(); return v ? Fala.idioma(v) : I.padrao; };
   if (sintese) {
     carregarVozes();
     sintese.addEventListener('voiceschanged', carregarVozes);
@@ -91,22 +120,37 @@
     }, 2500);
   }
   $('voz').onchange = () => { prefs.voz = $('voz').value; salvarPrefs(); reiniciarSeLendo(); };
-  $('testarVoz').onclick = () => { parar(); falar('Hello! How are you today? I hope you are learning a lot.', 1); };
+  $('testarVoz').onclick = () => { parar(); falar(I.teste, 1); };
 
   // Fala um texto e espera terminar. Devolve false se deu erro ou foi cancelado.
+  // VIGIA (conserto de 2026-11-26): às vezes o navegador "engole" uma fala e nunca avisa
+  // que terminou (onend). Antes, a leitura ficava parada para sempre e a lição não era salva.
+  // Agora, se a fala passar muito do tempo esperado, seguimos em frente sozinhos.
   function falar(texto, taxa, aoComecar, aoLimite) {
     return new Promise(resolve => {
       if (!sintese) { resolve(false); return; }
       const u = new SpeechSynthesisUtterance(texto);
       const v = vozAtual();
-      if (v) { u.voice = v; u.lang = Fala.idioma(v); } else u.lang = 'en-US';
+      if (v) { u.voice = v; u.lang = Fala.idioma(v); } else u.lang = I.padrao;
       u.rate = taxa;
+      let acabou = false, prorrogou = 0, vigia = null;
+      const fim = ok => { if (acabou) return; acabou = true; clearTimeout(vigia); resolve(ok); };
+      // tempo esperado com folga: ~70 ms por letra em 1x; damos mais que o dobro + 4 s
+      const limite = 4000 + (texto.length * 160) / Math.max(taxa, 0.3);
+      const vigiar = () => {
+        vigia = setTimeout(() => {
+          // ainda falando de verdade (voz lenta)? espera mais um pouco, no máximo 2 vezes
+          if (sintese.speaking && falar.ultima === u && prorrogou < 2) { prorrogou++; vigiar(); return; }
+          fim(true);
+        }, limite);
+      };
       u.onstart = () => aoComecar && aoComecar();
       u.onboundary = e => aoLimite && aoLimite(e);
-      u.onend = () => resolve(true);
-      u.onerror = () => resolve(false);
+      u.onend = () => fim(true);
+      u.onerror = () => fim(false);
       falar.ultima = u;            // guarda a fala: o Chrome às vezes "esquece" falas sem referência
       sintese.speak(u);
+      vigiar();
     });
   }
   const esperar = ms => new Promise(r => { estado.timers.push(setTimeout(r, ms)); });
@@ -174,12 +218,12 @@
   // Qual lição o botão "Continuar" abre: a última que você abriu (se não terminou),
   // senão a primeira lição ainda não feita, na ordem dos níveis.
   function proximaLicao() {
-    const ultima = ler('ingles:ultima', null);
-    for (const nv of Conteudo.NIVEIS) {
+    const ultima = ler(P + ':ultima', null);
+    for (const nv of NIVEIS) {
       const l = nv.licoes.find(x => ultima && x.id === ultima && !feitas[x.id]);
       if (l) return { nivel: nv, licao: l };
     }
-    for (const nv of Conteudo.NIVEIS) {
+    for (const nv of NIVEIS) {
       const l = nv.licoes.find(x => !feitas[x.id]);
       if (l) return { nivel: nv, licao: l };
     }
@@ -193,33 +237,42 @@
     b.type = 'button';
     b.className = 'continuar';
     if (alvo) {
-      const comecou = Object.keys(feitas).length || ler('ingles:ultima', null);
+      const comecou = Object.keys(feitas).length || ler(P + ':ultima', null);
       b.innerHTML = `<div><small>${comecou ? 'Continuar' : 'Começar'} · Nível ${alvo.nivel.n}</small><strong></strong></div>${ic('arrow')}`;
       b.querySelector('strong').textContent = alvo.licao.titulo;
-      b.onclick = () => { estado.nivel = alvo.nivel.n; abrirLicao(alvo.nivel, alvo.licao); };
+      b.onclick = () => abrirLicao(alvo.nivel, alvo.licao);
     } else {
-      b.innerHTML = `<div><small>Todas as lições feitas</small><strong>Abrir o seu livro</strong></div>${ic('arrow')}`;
-      b.onclick = () => abrirNivel(5);
+      b.innerHTML = `<div><small>Todas as lições feitas</small><strong>Criar uma lição sobre um assunto</strong></div>${ic('arrow')}`;
+      b.onclick = () => abrirNivel(6);
     }
     cont.appendChild(b);
 
-    const atual = alvo ? alvo.nivel.n : 5;
+    const atual = alvo ? alvo.nivel.n : 6;
+    const prontas = licoesProntas();
+    const prontasFeitas = prontas.filter(l => feitas[l.id]).length;
     const box = $('listaNiveis');
     box.innerHTML = '';
-    for (const nivel of Conteudo.NIVEIS) {
+    for (const nivel of NIVEIS) {
       const { total, ok } = progressoDoNivel(nivel);
       const completo = total && ok === total;
+      const trancado = nivel.n === 6 && !liberouAssuntos();
+      let conta = total ? `${ok} de ${total} lições` : 'Seu PDF, .txt ou texto colado';
+      if (nivel.n === 6) {
+        conta = trancado ? `Libera quando terminar os níveis 1 a 4 (${prontasFeitas} de ${prontas.length} lições)`
+          : total ? `${ok} de ${total} lições criadas por você` : 'Crie a sua primeira lição';
+      }
       const li = document.createElement('li');
       const p = document.createElement('button');
       p.type = 'button';
-      p.className = 'passo' + (nivel.n === atual ? ' atual' : completo ? ' completo' : '');
-      p.innerHTML = `<span class="num">${nivel.n}</span><div class="txt"><strong></strong><span></span>
-        <span class="conta">${total ? `${ok} de ${total} lições` : 'Seu PDF, .txt ou texto colado'}</span>
+      p.className = 'passo' + (nivel.n === atual ? ' atual' : completo ? ' completo' : '') + (trancado ? ' trancado' : '');
+      p.innerHTML = `<span class="num">${trancado ? '🔒' : nivel.n}</span><div class="txt"><strong></strong><span></span>
+        <span class="conta"></span>
         ${total ? `<div class="barra"><i style="width:${(ok / total) * 100}%"></i></div>` : ''}</div>`;
       p.dataset.n = nivel.n;
       p.querySelector('strong').textContent = nivel.nome;
       if (nivel.n === atual) p.querySelector('strong').insertAdjacentHTML('beforeend', '<span class="agora">você está aqui</span>');
       p.querySelector('.txt > span').textContent = nivel.desc;
+      p.querySelector('.conta').textContent = conta;
       p.onclick = () => abrirNivel(nivel.n);
       li.appendChild(p);
       box.appendChild(li);
@@ -227,8 +280,22 @@
   }
 
   // ---------- tela de lições ----------
+  function cartaoDeLicao(nivel, licao, i) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cartao-licao' + (feitas[licao.id] ? ' feita' : '');
+    const qtd = `${licao.frases.length} ${nivel.n === 1 ? 'palavras' : 'frases'}`;
+    const tipo = licao.tipo && Assunto.TIPOS[licao.tipo] ? ' · ' + Assunto.TIPOS[licao.tipo].nome : '';
+    b.innerHTML = `<span class="n">${i + 1}</span><div><strong></strong><span></span></div>
+      ${feitas[licao.id] ? `<span class="check" title="Feita">${ic('check')}</span>` : ''}`;
+    // textContent (e não innerHTML): o título da lição criada vem da IA, então não pode virar código na página
+    b.querySelector('strong').textContent = licao.titulo;
+    b.querySelector('div span').textContent = qtd + tipo;
+    b.onclick = () => abrirLicao(nivel, licao);
+    return b;
+  }
   function abrirNivel(n) {
-    const nivel = Conteudo.NIVEIS.find(x => x.n === n);
+    const nivel = NIVEIS.find(x => x.n === n);
     estado.nivel = n;
     $('tituloNivel').textContent = `Nível ${n} · ${nivel.nome}`;
     $('descNivel').textContent = nivel.desc;
@@ -239,20 +306,41 @@
       const s = document.createElement('p');
       s.className = 'sugestao';
       s.style.gridColumn = '1 / -1';
-      s.textContent = `Você terminou todas as lições deste nível. Pode repetir para fixar ou subir para o nível ${n + 1}.`;
+      s.textContent = n === 4 && liberouAssuntos()
+        ? 'Você terminou todas as lições prontas. O nível 6 liberou: crie lições sobre o assunto que quiser.'
+        : `Você terminou todas as lições deste nível. Pode repetir para fixar ou subir para o nível ${n + 1}.`;
       box.appendChild(s);
     }
     nivel.licoes.forEach((licao, i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'cartao-licao' + (feitas[licao.id] ? ' feita' : '');
-      b.innerHTML = `<span class="n">${i + 1}</span><div><strong>${licao.titulo}</strong><span>${licao.frases.length} ${n === 1 ? 'palavras' : 'frases'}</span></div>
-        ${feitas[licao.id] ? `<span class="check" title="Feita">${ic('check')}</span>` : ''}`;
-      b.onclick = () => abrirLicao(nivel, licao);
-      box.appendChild(b);
+      if (n !== 6) { box.appendChild(cartaoDeLicao(nivel, licao, i)); return; }
+      // nível 6: cada lição criada tem um botão para apagar
+      const linha = document.createElement('div');
+      linha.className = 'cartao-assunto';
+      const tirar = document.createElement('button');
+      tirar.type = 'button'; tirar.className = 'botao icone'; tirar.innerHTML = ic('trash');
+      tirar.setAttribute('aria-label', 'Apagar a lição ' + licao.titulo);
+      tirar.onclick = () => {
+        if (!confirm(`Apagar a lição "${licao.titulo}"?`)) return;
+        assuntos.splice(assuntos.indexOf(licao), 1);
+        delete feitas[licao.id];
+        gravar(P + ':assuntos', assuntos);
+        gravar(P + ':feitas', feitas);
+        abrirNivel(6);
+      };
+      linha.append(cartaoDeLicao(nivel, licao, i), tirar);
+      box.appendChild(linha);
     });
     $('livro').hidden = n !== 5;
     $('statusLivro').textContent = '';
+    $('assunto').hidden = n !== 6;
+    if (n === 6) {
+      const liberou = liberouAssuntos();
+      const prontas = licoesProntas();
+      $('assuntoTrava').hidden = liberou;
+      $('assuntoForm').hidden = !liberou;
+      $('assuntoTrava').textContent = `Termine as lições dos níveis 1 a 4 para liberar. Faltam ${prontas.filter(l => !feitas[l.id]).length} de ${prontas.length}.`;
+      $('statusAssunto').textContent = '';
+    }
     mostrar('telaLicoes');
   }
 
@@ -269,9 +357,11 @@
   }
 
   function abrirLicao(nivel, licao) {
+    estado.nivel = nivel.n;
     estado.licao = licao;
+    estado.primeiraVez = !feitas[licao.id];
     estado.livro = null;
-    gravar('ingles:ultima', licao.id);     // para o botão "Continuar" da tela inicial
+    gravar(P + ':ultima', licao.id);     // para o botão "Continuar" da tela inicial
     prepararLeitura(nivel, licao.titulo);
     usarFrases(licao.frases.map(([en, pt, emoji]) => ({ en, pt, emoji })), nivel.n === 1);
     $('paginacao').hidden = true;
@@ -281,6 +371,7 @@
   function usarFrases(lista, cartoes) {
     estado.frases = lista.map(f => Object.assign({ ps: Fala.palavras(f.en) }, f));
     estado.s = 0; estado.w = 0;
+    estado.ouvidas = new Set();
     desenharFrases(cartoes);
   }
 
@@ -303,7 +394,7 @@
       }
       const en = document.createElement('p');
       en.className = 'en';
-      en.lang = 'en';
+      en.lang = IDIOMA;
       const spans = f.ps.map((p, wi) => {
         const sp = document.createElement('span');
         sp.className = 'pal';
@@ -332,6 +423,15 @@
       estado.elPalavras.push(spans);
     });
     marcar(-1, -1);
+  }
+
+  // Conserto de 2026-11-26: a lição conta como feita quando você OUVIU todas as frases,
+  // por qualquer caminho (play, Repetir, frase a frase, tocando nos cartões do nível 1).
+  // Antes, só contava se a leitura chegasse sem tropeço até o fim da última frase.
+  function ouviu(s) {
+    if (!estado.ouvidas || !estado.licao) return;
+    estado.ouvidas.add(s);
+    if (estado.ouvidas.size >= estado.frases.length) marcarFeita(estado.licao);
   }
 
   // Pinta a frase e a palavra atuais
@@ -403,9 +503,12 @@
     if (sintese) sintese.cancel();
     estado.lendo = true;
     botaoTocar();
+    await esperar(80);                  // o Chrome às vezes perde a fala pedida logo depois do cancel()
+    if (g !== estado.geracao) return;
     while (s < estado.frases.length) {
       const ok = await lerFrase(s, w, g);
       if (!ok || g !== estado.geracao) return;
+      ouviu(s);
       w = 0;
       estado.ultimaLida = s;
       // Repita comigo: depois de ouvir, é a sua vez de falar a frase
@@ -449,10 +552,9 @@
     status('');
     if (estado.livro) { status('Fim da página. Use "Página" para continuar.'); return; }
     if (!estado.licao) return;
-    const primeiraVez = !feitas[estado.licao.id];
-    feitas[estado.licao.id] = true;
-    gravar('ingles:feitas', feitas);
-    const nivel = Conteudo.NIVEIS.find(x => x.n === estado.nivel);
+    marcarFeita(estado.licao);
+    const primeiraVez = estado.primeiraVez;   // guardado ao abrir: ouviu() pode ter marcado antes
+    const nivel = NIVEIS.find(x => x.n === estado.nivel);
     const idx = nivel.licoes.indexOf(estado.licao);
     const proxima = nivel.licoes[idx + 1];
     const fim = document.createElement('div');
@@ -507,7 +609,7 @@
       if (sintese) sintese.cancel();
       const r = new Reconhecer();
       reconhecedor = r;
-      r.lang = 'en-US';
+      r.lang = langDaVoz();
       r.interimResults = false;
       r.maxAlternatives = 5;
       r.continuous = false;
@@ -535,7 +637,7 @@
   function melhorResultado(palavrasDaTela, frases) {
     let melhor = { certos: palavrasDaTela.map(() => false), ouvido: '' };
     for (const f of frases) {
-      const c = Treino.compararFala(palavrasDaTela, f);
+      const c = Treino.compararFala(palavrasDaTela, f, IDIOMA);
       if (c.filter(Boolean).length > melhor.certos.filter(Boolean).length || !melhor.ouvido) melhor = { certos: c, ouvido: f };
     }
     return melhor;
@@ -547,7 +649,7 @@
     const spans = estado.elPalavras[s];
     spans.forEach(sp => sp.classList.remove('certa', 'errada'));
     estado.elFrases[s].classList.add('atual');
-    status('Sua vez: fale a frase em inglês.');
+    status(`Sua vez: fale a frase em ${I.nome}.`);
     const r = await ouvirVoce($('falarEu'));
     if (g !== undefined && g !== estado.geracao) return;
     if (r.erro) { status(r.erro); return; }
@@ -596,19 +698,20 @@
   // ---------- tradução e pronúncia (internet) ----------
   // MyMemory: tradução grátis, sem cadastro. Free Dictionary: pronúncia (IPA).
   async function traduzir(texto) {
-    const chave = 'en|' + texto.toLowerCase();
+    const chave = IDIOMA + '|' + texto.toLowerCase();
     if (cacheTrad[chave]) return cacheTrad[chave];
-    const url = 'https://api.mymemory.translated.net/get?langpair=en|pt-BR&q=' + encodeURIComponent(texto.slice(0, 480));
+    const url = 'https://api.mymemory.translated.net/get?langpair=' + IDIOMA + '|pt-BR&q=' + encodeURIComponent(texto.slice(0, 480));
     const r = await fetch(url);
     if (!r.ok) throw new Error('falhou');
     const j = await r.json();
     const t = j && j.responseData && j.responseData.translatedText;
     if (!t || /MYMEMORY WARNING|QUERY LENGTH/i.test(t)) throw new Error('limite');
     cacheTrad[chave] = t;
-    gravar('ingles:traducoes', cacheTrad);
+    gravar(P + ':traducoes', cacheTrad);
     return t;
   }
   async function pronuncia(palavra) {
+    if (IDIOMA !== 'en') return '';     // o dicionário grátis só tem inglês (o espanhol se lê como se escreve)
     const p = palavra.toLowerCase();
     if (p in cacheIpa) return cacheIpa[p];
     let ipa = '';
@@ -621,7 +724,7 @@
       }
     } catch { return ''; }
     cacheIpa[p] = ipa;
-    gravar('ingles:ipa', cacheIpa);
+    gravar(P + ':ipa', cacheIpa);
     return ipa;
   }
   async function traduzirFrase(si) {
@@ -652,7 +755,7 @@
     atualizarBotaoSalvar();
     $('jLerDaqui').hidden = !!f.emoji;
     $('janela').showModal();
-    falar(en, 0.85);
+    falar(en, 0.85).then(ok => { if (ok && f.emoji) ouviu(si); });   // nível 1: ouvir o cartão conta
     pronuncia(en).then(ipa => { if (palavraAberta && palavraAberta.en === en) $('jIpa').textContent = ipa ? `Pronúncia: ${ipa}` : ''; });
     if (!f.emoji) {
       try {
@@ -711,7 +814,7 @@
       aviso.append(t, b);
     }
   }
-  function salvarCaderno() { gravar('ingles:caderno', caderno); contarCaderno(); }
+  function salvarCaderno() { gravar(P + ':caderno', caderno); contarCaderno(); }
 
   // ---------- revisão com flashcards ----------
   // Aparece a palavra em inglês (e a voz fala). Você tenta lembrar o significado,
@@ -796,9 +899,9 @@
       ouvir.onclick = () => { sintese && sintese.cancel(); falar(c.en, 0.85); };
       const txt = document.createElement('div');
       txt.className = 'txt';
-      const forte = document.createElement('strong'); forte.lang = 'en'; forte.textContent = c.en;
+      const forte = document.createElement('strong'); forte.lang = IDIOMA; forte.textContent = c.en;
       const pt = document.createElement('span'); pt.textContent = c.pt;
-      const fr = document.createElement('small'); fr.lang = 'en'; fr.textContent = c.frase && c.frase !== c.en ? c.frase : '';
+      const fr = document.createElement('small'); fr.lang = IDIOMA; fr.textContent = c.frase && c.frase !== c.en ? c.frase : '';
       const quando = document.createElement('small'); quando.className = 'quando';
       quando.textContent = !c.proxima ? 'Nova: ainda não revisada'
         : c.proxima <= Treino.hojeISO() ? 'Revisar hoje' : 'Próxima revisão: ' + c.proxima.split('-').reverse().slice(0, 2).join('/');
@@ -818,11 +921,11 @@
   };
 
   // ---------- nível 5: o seu livro ----------
-  const nivel5 = () => Conteudo.NIVEIS.find(x => x.n === 5);
+  const nivel5 = () => NIVEIS.find(x => x.n === 5);
   function abrirLivro(nome, paginas) {
     estado.licao = null;
     estado.livro = { nome, paginas: paginas.length ? paginas : [[]], pagina: 0 };
-    const marcador = ler('ingles:marcador', {});
+    const marcador = ler(P + ':marcador', {});
     if (marcador.nome === nome && marcador.pagina < paginas.length) estado.livro.pagina = marcador.pagina;
     prepararLeitura(nivel5(), nome);
     mostrarPaginaDoLivro();
@@ -838,7 +941,7 @@
     $('pagInfo').textContent = `Página ${l.pagina + 1} de ${l.paginas.length}`;
     $('pagAnt').disabled = l.pagina === 0;
     $('pagProx').disabled = l.pagina >= l.paginas.length - 1;
-    gravar('ingles:marcador', { nome: l.nome, pagina: l.pagina });
+    gravar(P + ':marcador', { nome: l.nome, pagina: l.pagina });
     window.scrollTo(0, 0);
   }
   $('pagAnt').onclick = () => { estado.livro.pagina--; mostrarPaginaDoLivro(); };
@@ -884,6 +987,50 @@
     }
   };
 
+  // ---------- nível 6: criar uma lição sobre um assunto ----------
+  $('assuntoCriar').onclick = async () => {
+    const texto = $('assuntoTexto').value.replace(/\s+/g, ' ').trim();
+    const st = msg => { $('statusAssunto').textContent = msg || ''; };
+    if (!texto) { st('Escreva um assunto primeiro. Ex: futebol, viagem, no restaurante.'); return; }
+    const tipo = $('assuntoTipo').value;
+    $('assuntoCriar').disabled = true;
+    try {
+      const l = await Assunto.gerar(texto, I.nome, tipo, st);
+      const licao = { id: 'a-' + Date.now().toString(36), titulo: l.titulo, assunto: texto, tipo, frases: l.frases };
+      assuntos.push(licao);
+      gravar(P + ':assuntos', assuntos);
+      $('assuntoTexto').value = '';
+      st('');
+      abrirLicao(NIVEL6, licao);
+    } catch (e) {
+      st(e.message);
+    } finally {
+      $('assuntoCriar').disabled = false;
+    }
+  };
+  $('assuntoTexto').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('assuntoCriar').click(); } });
+
+  // ---------- troca de idioma ----------
+  // Cada idioma tem o seu progresso; o tema e o tamanho da letra vão junto na troca.
+  function trocarIdioma(cod) {
+    if (cod === IDIOMA) return;
+    const chaveOutro = (cod === 'es' ? 'espanhol' : 'ingles') + ':prefs';
+    gravar(chaveOutro, Object.assign(ler(chaveOutro, {}), { tema: prefs.tema, fonte: prefs.fonte }));
+    gravar('idiomas:atual', cod);
+    parar();
+    location.replace(location.pathname + location.search);   // recarrega sem o #atalho
+  }
+  document.querySelectorAll('.idiomas button').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.idioma === IDIOMA));
+    b.onclick = () => trocarIdioma(b.dataset.idioma);
+  });
+  // Textos da página que dependem do idioma
+  document.title = `Leitor de Idiomas · ${I.Nome}`;
+  $('tituloInicio').textContent = `Seu ${I.nome}, passo a passo`;
+  $('ouCole').textContent = `ou cole um texto em ${I.nome}:`;
+  $('colado').placeholder = IDIOMA === 'es' ? 'Pega aquí tu texto en español' : 'Paste your English text here';
+  document.querySelectorAll('[lang="en"]').forEach(el => { el.lang = IDIOMA; });
+
   // ---------- navegação ----------
   $('inicio').onclick = () => { montarNiveis(); mostrar('telaNiveis'); };
   $('voltarNiveis').onclick = () => { montarNiveis(); mostrar('telaNiveis'); };
@@ -898,9 +1045,9 @@
 
   // Atalho pelo endereço: #licao=2-casa abre a lição direto, #nivel=5 abre o nível
   const m = location.hash.match(/^#(licao|nivel)=(.+)$/);
-  if (m && m[1] === 'nivel' && Conteudo.NIVEIS.some(x => x.n === +m[2])) abrirNivel(+m[2]);
+  if (m && m[1] === 'nivel' && NIVEIS.some(x => x.n === +m[2])) abrirNivel(+m[2]);
   if (m && m[1] === 'licao') {
-    for (const nv of Conteudo.NIVEIS) {
+    for (const nv of NIVEIS) {
       const l = nv.licoes.find(x => x.id === decodeURIComponent(m[2]));
       if (l) { estado.nivel = nv.n; abrirLicao(nv, l); }
     }
