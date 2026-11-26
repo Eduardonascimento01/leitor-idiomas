@@ -19,6 +19,8 @@
   }
   function gravar(chave, valor) {
     try { localStorage.setItem(chave, JSON.stringify(valor)); } catch { /* modo privado: ignora */ }
+    // progresso que vai para a nuvem (nuvem.js): avisa que mudou
+    if (/:(feitas|caderno|assuntos|apagados|tirados)$/.test(chave)) window.dispatchEvent(new Event('leitor:mudou'));
   }
 
   // ---------- idioma (inglês ou espanhol) ----------
@@ -43,11 +45,13 @@
   const assuntos = ler(P + ':assuntos', []);      // lições que a IA criou para você
   const BASE = IDIOMA === 'es' ? ConteudoES.NIVEIS : Conteudo.NIVEIS;
   const NIVEL6 = { n: 6, nome: 'Seus assuntos', icone: '✨', licoes: assuntos,
-    desc: 'Escolha um assunto e a IA cria uma lição sobre ele, no mesmo jeito das outras.' };
+    desc: 'Escolha um assunto e crie uma lição sobre ele, no mesmo jeito das outras.' };
   const NIVEIS = BASE.concat(NIVEL6);
-  // O nível 6 libera quando você termina todas as lições prontas (níveis 1 a 4)
+  // O nível 6 já vem aberto (pedido do Eduardo, 2026-11-26: sem trava).
+  // Para voltar a trava "só depois dos níveis 1 a 4", troque o true por:
+  //   licoesProntas().every(l => feitas[l.id])
   const licoesProntas = () => BASE.flatMap(nv => nv.licoes);
-  const liberouAssuntos = () => licoesProntas().every(l => feitas[l.id]);
+  const liberouAssuntos = () => true;
   function marcarFeita(licao) {
     if (!licao || feitas[licao.id]) return false;
     feitas[licao.id] = true;
@@ -306,8 +310,8 @@
       const s = document.createElement('p');
       s.className = 'sugestao';
       s.style.gridColumn = '1 / -1';
-      s.textContent = n === 4 && liberouAssuntos()
-        ? 'Você terminou todas as lições prontas. O nível 6 liberou: crie lições sobre o assunto que quiser.'
+      s.textContent = n === 4
+        ? 'Você terminou todas as lições prontas. No nível 6, crie lições sobre o assunto que quiser.'
         : `Você terminou todas as lições deste nível. Pode repetir para fixar ou subir para o nível ${n + 1}.`;
       box.appendChild(s);
     }
@@ -323,6 +327,8 @@
         if (!confirm(`Apagar a lição "${licao.titulo}"?`)) return;
         assuntos.splice(assuntos.indexOf(licao), 1);
         delete feitas[licao.id];
+        // lista de apagados: para o outro aparelho não trazer a lição de volta (sincronia.js)
+        gravar(P + ':apagados', ler(P + ':apagados', []).concat(licao.id));
         gravar(P + ':assuntos', assuntos);
         gravar(P + ':feitas', feitas);
         abrirNivel(6);
@@ -681,8 +687,12 @@
     marcar(s, -1);
     if (lendo) tocarDe(s, 0);
   }
-  $('fraseAnt').onclick = () => irPara(estado.s - 1);
-  $('fraseProx').onclick = () => irPara(estado.s + 1);
+  // Conserto de 2026-11-26: com "Parar depois de cada frase", o app já deixa estado.s
+  // apontando para a PRÓXIMA frase (para o play continuar). Somar +1 de novo pulava duas.
+  // Agora a conta parte da frase que está pintada na tela.
+  const fraseNaTela = () => (marcadaFrase >= 0 ? marcadaFrase : estado.s);
+  $('fraseAnt').onclick = () => irPara(fraseNaTela() - 1);
+  $('fraseProx').onclick = () => irPara(fraseNaTela() + 1);
 
   document.addEventListener('keydown', e => {
     if ($('telaLeitura').hidden || $('janela').open) return;
@@ -814,7 +824,14 @@
       aviso.append(t, b);
     }
   }
-  function salvarCaderno() { gravar(P + ':caderno', caderno); contarCaderno(); }
+  function salvarCaderno() {
+    // palavra salva de novo sai da lista de "tiradas"
+    const tirados = ler(P + ':tirados', []);
+    const ficam = tirados.filter(t => !noCaderno(t));
+    if (ficam.length !== tirados.length) gravar(P + ':tirados', ficam);
+    gravar(P + ':caderno', caderno);
+    contarCaderno();
+  }
 
   // ---------- revisão com flashcards ----------
   // Aparece a palavra em inglês (e a voz fala). Você tenta lembrar o significado,
@@ -909,7 +926,10 @@
       const tirar = document.createElement('button');
       tirar.className = 'botao icone'; tirar.type = 'button'; tirar.innerHTML = ic('trash');
       tirar.setAttribute('aria-label', 'Tirar ' + c.en + ' do caderno');
-      tirar.onclick = () => { caderno.splice(i, 1); salvarCaderno(); montarCaderno(); };
+      tirar.onclick = () => {
+        gravar(P + ':tirados', ler(P + ':tirados', []).concat(c.en.toLowerCase()));   // não volta pela nuvem
+        caderno.splice(i, 1); salvarCaderno(); montarCaderno();
+      };
       item.append(ouvir, txt, tirar);
       box.appendChild(item);
     });

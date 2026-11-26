@@ -16,6 +16,7 @@ Projeto irmão do [Leitor de Livros](https://github.com/Eduardonascimento01/leit
 - **🎤 Repita comigo (v2):** você fala a frase no microfone e cada palavra fica verde (certa) ou vermelha (treinar). Pode ser pelo botão 🎤 ou automático depois de cada frase. Também funciona na janela da palavra e nos flashcards.
 - **🧠 Flashcards com revisão espaçada (v2):** as palavras do caderno voltam para revisão em 1, 2, 4, 7, 15 e 30 dias conforme você acerta; se errar, ela volta no mesmo dia. No nível 1, dá para pôr todas as palavras da lição no caderno de uma vez.
 - **Caderno de palavras** e progresso das lições, guardados no navegador.
+- **☁️ Progresso na nuvem (opcional):** entrando com o Google, as lições feitas, o caderno e os seus assuntos ficam no Firebase e aparecem em qualquer aparelho. O que foi feito em dois aparelhos é juntado sem perder nada (`sincronia.js`).
 - Funciona no PC e no celular.
 
 ## Como usar
@@ -29,6 +30,8 @@ Link direto para uma lição: `index.html#licao=2-casa`.
 - `treino.js`: compara a sua fala com a frase e calcula a revisão espaçada, testável no Node
 - `conteudo.js` e `conteudo-es.js`: os níveis e as lições (inglês e espanhol)
 - `assunto.js`: pede a lição do nível 6 para a IA e confere a resposta
+- `sincronia.js`: junta o progresso do aparelho com o da nuvem, testável no Node
+- `nuvem.js`: login com o Google e gravação no Firebase; `firebase-config.js` liga (null = desligado); `firestore.rules`: regras de segurança para colar no console
 - `app.js`: a tela e a voz
 - `texto.js`: transforma o texto do PDF em parágrafos (vem do Leitor de Livros)
 - `teste.js`: rode `node teste.js`

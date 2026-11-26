@@ -344,3 +344,12 @@ textarea {
   .linha-play .rotulo { display: none; }
   .linha-play .botao { min-width: 48px; padding: 0 12px; }
 }
+
+/* ---------- nuvem: login com o Google ---------- */
+.nuvem {
+  display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between;
+  padding: 10px 14px; margin: 0 0 16px; border-radius: 12px;
+  background: var(--azul-claro); border: 1px solid var(--azul-borda); font-size: .92rem;
+}
+.nuvem[hidden] { display: none; }
+.nuvem span { flex: 1; min-width: 180px; }

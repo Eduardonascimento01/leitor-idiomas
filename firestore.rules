@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Regras do Leitor de Idiomas. Cole no console do Firebase:
+// Firestore Database > Regras > Publicar.
+// Cada pessoa só lê e grava a própria gaveta: progresso/<id dela>.
+// (Sem "function" e sem "let": o editor do console recusou essa forma em 2026-11-12.)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /progresso/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['ingles', 'espanhol', 'atualizado'])
+        && request.resource.data.ingles is string
+        && request.resource.data.ingles.size() < 400000
+        && request.resource.data.espanhol is string
+        && request.resource.data.espanhol.size() < 400000
+        && request.resource.data.atualizado == request.time;
+    }
+
+    // todo o resto fica fechado
+    match /{caminho=**} {
+      allow read, write: if false;
+    }
+  }
+}

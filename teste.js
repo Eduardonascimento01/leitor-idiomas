@@ -208,3 +208,37 @@ teste('assunto: lê a resposta da IA mesmo com ```json em volta, e recusa respos
 });
 
 console.log(`\n${ok} testes passaram (com espanhol e assuntos).`);
+
+// ---------- nuvem: juntar o progresso de dois aparelhos (2026-11-26) ----------
+const SI = require('./sincronia.js');
+
+teste('nuvem: lição feita em qualquer aparelho fica feita nos dois', () => {
+  const j = SI.juntar({ feitas: { '1-casa': true } }, { feitas: { '1-comida': true } });
+  assert.deepStrictEqual(Object.keys(j.feitas).sort(), ['1-casa', '1-comida']);
+});
+
+teste('nuvem: caderno sem palavra repetida; fica o cartão mais revisado', () => {
+  const pc = { caderno: [{ en: 'water', pt: 'água', acertos: 3 }, { en: 'bread', pt: 'pão' }] };
+  const cel = { caderno: [{ en: 'Water', pt: 'água', acertos: 0 }, { en: 'milk', pt: 'leite' }] };
+  const j = SI.juntar(pc, cel);
+  assert.deepStrictEqual(j.caderno.map(c => c.en).sort(), ['bread', 'milk', 'water']);
+  assert.strictEqual(j.caderno.find(c => c.en === 'water').acertos, 3);
+});
+
+teste('nuvem: o que você apagou não volta do outro aparelho', () => {
+  const aqui = { caderno: [], tirados: ['water'], assuntos: [], apagados: ['a-1'] };
+  const nuvem = { caderno: [{ en: 'water' }], assuntos: [{ id: 'a-1', titulo: 'x', frases: [] }, { id: 'a-2', titulo: 'y', frases: [] }], feitas: { 'a-1': true } };
+  const j = SI.juntar(aqui, nuvem);
+  assert.strictEqual(j.caderno.length, 0);
+  assert.deepStrictEqual(j.assuntos.map(l => l.id), ['a-2']);
+  assert.ok(!j.feitas['a-1']);
+});
+
+teste('nuvem: dado estragado na nuvem não quebra o app', () => {
+  const j = SI.juntar({ feitas: { x: true } }, 'lixo');
+  assert.deepStrictEqual(j.feitas, { x: true });
+  assert.ok(SI.igual(SI.juntar(j, {}), j));
+});
+
+console.log(`
+${ok} testes passaram (com a nuvem).`);
