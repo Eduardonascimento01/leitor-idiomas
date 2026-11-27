@@ -249,5 +249,26 @@ teste('dividirFrases: abreviação não corta a frase (inglês e espanhol)', () 
     ['Vamos al parque, etc.', 'Mañana es sábado.']);
 });
 
+const ESP = require('./espanhol.js');   // ESP (e não ES): ES já é o conteúdo em espanhol
+teste('espanhol: pronúncia por regras (sílabas, sílaba forte, ditongos)', () => {
+  const casos = { casa: '/ˈka.sa/', perro: '/ˈpe.ro/', estás: '/es.ˈtas/', corazón: '/ko.ɾa.ˈθon/', mañana: '/ma.ˈɲa.na/',
+    guitarra: '/gi.ˈta.ra/', pingüino: '/pin.ˈgwi.no/', queso: '/ˈke.so/', llamo: '/ˈʝa.mo/', hola: '/ˈo.la/', día: '/ˈdi.a/',
+    ciudad: '/θju.ˈdad/', rey: '/rej/', trabajo: '/tɾa.ˈba.xo/', ahora: '/a.ˈo.ɾa/', leer: '/le.ˈeɾ/', país: '/pa.ˈis/',
+    cuatro: '/ˈkwa.tɾo/', honra: '/ˈon.ra/', y: '/i/', muy: '/mwi/', examen: '/ek.ˈsa.men/', gente: '/ˈxen.te/', agua: '/ˈa.gwa/' };
+  for (const [p, esperado] of Object.entries(casos)) assert.strictEqual(ESP.ipa(p, { espanha: true }), esperado, p);
+  assert.strictEqual(ESP.ipa('corazón'), '/ko.ɾa.ˈson/');     // voz da América: "z" soa como "s"
+  assert.strictEqual(ESP.ipa('¿Cómo?', { espanha: true }), '/ˈko.mo/');
+});
+
+teste('espanhol: Wiktionary vira classe, gênero e infinitivo', () => {
+  const pagina = ['==English==', '{{en-noun}}', '==Spanish==', '===Noun===', '{{es-noun|f|dim=casita}}',
+    '===Verb===', '{{es-verb form of|casar}}', '==Portuguese==', '{{pt-noun|f}}'].join('\n');
+  assert.deepStrictEqual(ESP.lerWiktionary(pagina), ['substantivo feminino (la)', 'forma do verbo casar']);
+  assert.deepStrictEqual(ESP.lerWiktionary('==Spanish==\n{{es-noun|m}}'), ['substantivo masculino (el)']);
+  assert.deepStrictEqual(ESP.lerWiktionary('==Spanish==\n{{es-adj}}\n{{plural of|es|grande}}'), ['adjetivo', 'plural de grande']);
+  assert.deepStrictEqual(ESP.lerWiktionary('==French==\n{{fr-noun|m}}'), []);   // sem espanhol: nada
+  assert.deepStrictEqual(ESP.lerWiktionary(undefined), []);
+});
+
 console.log(`
 ${ok} testes passaram (com a nuvem).`);

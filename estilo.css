@@ -296,6 +296,8 @@ textarea {
 .janela-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .j-palavra { font: 400 2rem var(--livro); overflow-wrap: anywhere; }
 .j-ipa { color: var(--suave); margin: 4px 0 12px; min-height: 1.2em; }
+/* espanhol: classe, gênero (el/la) e infinitivo do verbo, vindos do Wiktionary */
+.j-info { margin: -6px 0 12px; padding: 6px 10px; border-radius: 8px; background: var(--azul-claro); color: var(--texto); font-size: .92rem; }
 .j-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
 .j-rotulo { margin: 16px 0 4px; font-size: .85rem; color: var(--suave); }
 .j-traducao { margin: 0 0 16px; font-size: 1.25rem; color: var(--pt); min-height: 1.4em; }

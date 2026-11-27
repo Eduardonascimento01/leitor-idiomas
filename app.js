@@ -39,6 +39,7 @@
   let caderno = ler(P + ':caderno', []);          // [{ en, pt, frase, data }]
   const cacheTrad = ler(P + ':traducoes', {});    // { 'en|texto': 'tradução' }
   const cacheIpa = ler(P + ':ipa', {});           // { palavra: '/ipa/' }
+  const cacheInfo = ler(P + ':info', {});         // espanhol: { palavra: ['substantivo feminino (la)', ...] }
   // Obs.: o campo "en" das frases e do caderno quer dizer "texto no idioma estudado" (no espanhol, é o espanhol)
 
   // ---------- níveis: os 5 do idioma + o nível 6, "Seus assuntos" ----------
@@ -723,8 +724,38 @@
     gravar(P + ':traducoes', cacheTrad);
     return t;
   }
+  // Espanhol: pergunta ao Wiktionary (grátis, sem chave) a classe, o gênero e o infinitivo.
+  // "estás" -> "forma do verbo estar"; "leche" -> "substantivo feminino (la)". Guarda o que já buscou.
+  async function infoEspanhol(palavra) {
+    const p = palavra.toLowerCase();
+    if (p in cacheInfo) return cacheInfo[p];
+    const buscar = async titulo => {
+      const url = 'https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvprop=content&rvslots=main'
+        + '&format=json&formatversion=2&redirects=1&origin=*&titles=' + encodeURIComponent(titulo);
+      const ctrl = new AbortController();
+      const tempo = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const j = await (await fetch(url, { signal: ctrl.signal })).json();
+        const pg = j && j.query && j.query.pages && j.query.pages[0];
+        const texto = pg && pg.revisions && pg.revisions[0] && pg.revisions[0].slots.main.content;
+        return Espanhol.lerWiktionary(texto);
+      } finally { clearTimeout(tempo); }
+    };
+    let itens = [];
+    try {
+      itens = await buscar(p);
+      if (!itens.length && palavra !== p) itens = await buscar(palavra);   // nome próprio: Madrid, García
+    } catch { return []; }   // sem internet: só não mostra (e não guarda, para tentar de novo depois)
+    cacheInfo[p] = itens;
+    gravar(P + ':info', cacheInfo);
+    return itens;
+  }
+
   async function pronuncia(palavra) {
-    if (IDIOMA !== 'en') return '';     // o dicionário grátis só tem inglês (o espanhol se lê como se escreve)
+    // espanhol: se lê como se escreve, então a pronúncia sai por REGRAS (espanhol.js), sem internet.
+    // Com voz da Espanha, "cielo" = /ˈθje.lo/; com voz da América, /ˈsje.lo/.
+    if (IDIOMA === 'es') return window.Espanhol ? Espanhol.ipa(palavra, { espanha: /^es-ES/i.test(langDaVoz()) }) : '';
+    if (IDIOMA !== 'en') return '';
     const p = palavra.toLowerCase();
     if (p in cacheIpa) return cacheIpa[p];
     let ipa = '';
@@ -763,6 +794,7 @@
     palavraAberta = { en, frase: f.en, si, wi };
     $('jPalavra').textContent = en;
     $('jIpa').textContent = '';
+    $('jInfo').hidden = true;
     $('jResultado').textContent = '';
     $('jTraducao').textContent = f.emoji ? f.pt : 'Buscando...';
     atualizarBotaoSalvar();
@@ -770,6 +802,12 @@
     $('janela').showModal();
     falar(en, 0.85).then(ok => { if (ok && f.emoji) ouviu(si); });   // nível 1: ouvir o cartão conta
     pronuncia(en).then(ipa => { if (palavraAberta && palavraAberta.en === en) $('jIpa').textContent = ipa ? `Pronúncia: ${ipa}` : ''; });
+    if (IDIOMA === 'es' && !f.emoji) infoEspanhol(en).then(itens => {
+      if (!palavraAberta || palavraAberta.en !== en || !itens.length) return;
+      // o 1º sentido é o principal; os outros vêm como "também" (leche: substantivo... · também: forma do verbo lechar)
+      $('jInfo').textContent = itens[0] + (itens.length > 1 ? ' · também: ' + itens.slice(1).join(', ') : '');
+      $('jInfo').hidden = false;
+    });
     if (!f.emoji) {
       try {
         const t = await traduzir(en);
