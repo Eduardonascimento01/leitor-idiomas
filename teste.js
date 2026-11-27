@@ -240,5 +240,14 @@ teste('nuvem: dado estragado na nuvem não quebra o app', () => {
   assert.ok(SI.igual(SI.juntar(j, {}), j));
 });
 
+teste('dividirFrases: abreviação não corta a frase (inglês e espanhol)', () => {
+  assert.deepStrictEqual(F.dividirFrases('El Sr. García vive con la Dra. López. ¿Y tú?'),
+    ['El Sr. García vive con la Dra. López.', '¿Y tú?']);
+  assert.deepStrictEqual(F.dividirFrases('Mr. Smith met Dr. Brown. J. K. Rowling wrote it.'),
+    ['Mr. Smith met Dr. Brown.', 'J. K. Rowling wrote it.']);
+  assert.deepStrictEqual(F.dividirFrases('Vamos al parque, etc. Mañana es sábado.'),
+    ['Vamos al parque, etc.', 'Mañana es sábado.']);
+});
+
 console.log(`
 ${ok} testes passaram (com a nuvem).`);

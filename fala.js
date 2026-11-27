@@ -28,11 +28,21 @@
 
   // Divide um texto em frases. Frases muito longas são cortadas
   // (em vírgula, se der) para a voz não travar.
+  // Títulos e abreviações comuns em inglês e espanhol (o ponto delas não acaba a frase).
+  // "etc." fica de fora: muitas vezes ele É o fim da frase.
+  const ABREVIACAO = /(^|\s)(Mr|Mrs|Ms|Mx|Dr|Dra|Drs|Sr|Sra|Srta|Sres|St|Prof|Profa|Jr|Ud|Uds|Vd|Vds|Lic|Ing|Av|Pág|pág|Núm|núm|No|vs|Fig|fig|aprox)\.$/;
   function dividirFrases(texto, max = 25) {
     const limpo = (texto || '').replace(/\s+/g, ' ').trim();
     if (!limpo) return [];
     // (a frase em espanhol pode começar com ¿ ou ¡)
-    const brutas = limpo.split(/(?<=[.!?…]["”')\]]*)\s+(?=["“'(\[¿¡]?[A-Z0-9À-ÝÑ])/);
+    const cortes = limpo.split(/(?<=[.!?…]["”')\]]*)\s+(?=["“'(\[¿¡]?[A-Z0-9À-ÝÑ])/);
+    // Abreviação não termina frase: "El Sr. García", "Dr. Smith", "J. K. Rowling" ficam juntos
+    const brutas = [];
+    for (const c of cortes) {
+      const ant = brutas[brutas.length - 1];
+      if (ant !== undefined && (ABREVIACAO.test(ant) || /(^|\s)[A-ZÁÉÍÓÚÑ]\.$/.test(ant))) brutas[brutas.length - 1] = ant + ' ' + c;
+      else brutas.push(c);
+    }
     const frases = [];
     for (const f of brutas) {
       const ps = palavras(f);

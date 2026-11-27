@@ -86,6 +86,9 @@
   // ---------- tema e letra ----------
   function aplicarVisual() {
     document.documentElement.dataset.tema = prefs.tema;
+    // a barra de cima do celular fica da cor do topo do app (claro ou escuro)
+    const barra = document.getElementById('corBarra');
+    if (barra) barra.content = prefs.tema === 'escuro' ? '#1e232b' : '#ffffff';
     $('tema').innerHTML = `<span class="emoji-btn" aria-hidden="true">${prefs.tema === 'escuro' ? '☀️' : '🌙'}</span>`;
     document.documentElement.style.setProperty('--fonte-leitura', prefs.fonte + 'rem');
   }
@@ -260,10 +263,10 @@
       const { total, ok } = progressoDoNivel(nivel);
       const completo = total && ok === total;
       const trancado = nivel.n === 6 && !liberouAssuntos();
-      let conta = total ? `${ok} de ${total} lições` : 'Seu PDF, .txt ou texto colado';
+      let conta = total ? `${ok} de ${total} ${total === 1 ? 'lição' : 'lições'}` : 'Seu PDF, .txt ou texto colado';
       if (nivel.n === 6) {
         conta = trancado ? `Libera quando terminar os níveis 1 a 4 (${prontasFeitas} de ${prontas.length} lições)`
-          : total ? `${ok} de ${total} lições criadas por você` : 'Crie a sua primeira lição';
+          : total ? `${ok} de ${total} ${total === 1 ? 'lição criada' : 'lições criadas'} por você` : 'Crie a sua primeira lição';
       }
       const li = document.createElement('li');
       const p = document.createElement('button');
@@ -588,7 +591,7 @@
       if (novas.length) {
         const cd = document.createElement('button');
         cd.className = 'botao'; cd.type = 'button';
-        cd.innerHTML = `${ic('bookmark')} Pôr as ${novas.length} palavras no caderno`;
+        cd.innerHTML = `${ic('bookmark')} ${novas.length === 1 ? 'Pôr a palavra' : `Pôr as ${novas.length} palavras`} no caderno`;
         cd.onclick = () => {
           for (const [en, pt] of novas) if (!noCaderno(en)) caderno.push({ en, pt, frase: '', data: Treino.hojeISO() });
           salvarCaderno();
@@ -662,7 +665,7 @@
     const { certos, ouvido } = melhorResultado(f.ps, r.frases);
     certos.forEach((ok, i) => spans[i].classList.add(ok ? 'certa' : 'errada'));
     const n = Treino.nota(certos);
-    status(`${n.ok} de ${n.total} palavras certas. ${n.msg} Entendi: "${ouvido || '...'}"`);
+    status(`${n.ok} de ${n.total} ${n.total === 1 ? 'palavra certa' : 'palavras certas'}. ${n.msg} Entendi: "${ouvido || '...'}"`);
     if (g !== undefined) await esperar(1800);   // dá tempo de ver o resultado antes de seguir
   }
   $('falarEu').onclick = () => {
@@ -973,6 +976,13 @@
     for (let i = 0; i < frases.length; i += porPagina) paginas.push(frases.slice(i, i + porPagina));
     return paginas;
   }
+  // .txt antigo do Windows (Bloco de Notas "ANSI") não vem em UTF-8: "señor" virava "se�or".
+  // Tenta UTF-8 primeiro; se não for, lê como Windows-1252 (o jeito antigo, com os acentos do português e do espanhol).
+  async function lerTextoDoArquivo(arq) {
+    const bytes = await arq.arrayBuffer();
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+    catch { return new TextDecoder('windows-1252').decode(bytes); }
+  }
   $('lerColado').onclick = () => {
     const frases = Fala.dividirFrases($('colado').value);
     if (!frases.length) { $('statusLivro').textContent = 'Cole um texto primeiro.'; return; }
@@ -999,7 +1009,7 @@
         st.textContent = '';
         abrirLivro(arq.name, paginas);
       } else {
-        const frases = Texto.paragrafosDeLinhas((await arq.text()).split(/\r?\n/)).flatMap(p => Fala.dividirFrases(p));
+        const frases = Texto.paragrafosDeLinhas((await lerTextoDoArquivo(arq)).split(/\r?\n/)).flatMap(p => Fala.dividirFrases(p));
         abrirLivro(arq.name, paginarFrases(frases));
       }
     } catch (e) {
